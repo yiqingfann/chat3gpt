@@ -1,29 +1,55 @@
 import { type NextPage } from "next";
-import Head from "next/head";
+import { type FormEvent, useState, useEffect } from "react";
 
 import { api } from "~/utils/api";
 
-const Home: NextPage = () => {
-  // some mock data
-  const messages = [
-    { role: "user", content: "Hello from React!" },
-  ];
+type Message = {
+  role: "user" | "assistant" | "system",
+  content: string,
+};
 
-  // call backend api
-  const { data, isLoading } = api.chat.getResponse.useQuery({
+const Home: NextPage = () => {
+  const [curUserMessage, setCurUserMessage] = useState("");
+  const [messages, setMessages] = useState<Message[]>([
+    // { role: "user", content: "Hello, I'm Frank" },
+    // { role: "assistant", content: "Hi, I'm ChatGPT" },
+  ]);
+  const { data, refetch } = api.chat.getResponse.useQuery({
     messages: messages,
+  }, {
+    enabled: false,
   });
-  if (isLoading) return <div>Loading...</div>;
-  if (!data) return <div>No data</div>;
+
+  const handleSendMessage = (e: FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    setMessages((prevMessages) => [...prevMessages, { role: "user", content: curUserMessage }]);
+    setCurUserMessage("");
+  }
+
+  useEffect(() => {
+    if (!messages.length) return;
+    void refetch();
+  }, [messages, refetch]);
 
   return (
     <>
-      <Head>
-        <title>chat3gpt</title>
-        <meta name="description" content="chat3gpt" />
-        <link rel="icon" href="/favicon.ico" />
-      </Head>
-      <div>{data.message}</div>
+      {messages.map((m) => {
+        return (
+          <div key={m.content} className={m.role === "user" ? "bg-blue-100" : "bg-pink-100"}>
+            <div>{m.content}</div>
+          </div>
+        );
+      })}
+
+      <div className="bg-yellow-100">{data?.curAssistantMessage}</div>
+
+      <form onSubmit={handleSendMessage}>
+        <input
+          value={curUserMessage}
+          onChange={(e) => setCurUserMessage(e.target.value)}
+        />
+        <button>Send</button>
+      </form>
     </>
   );
 };

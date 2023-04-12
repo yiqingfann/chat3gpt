@@ -14,7 +14,7 @@ export const chatRouter = createTRPCRouter({
       console.log("---input", input);
 
       return {
-        message: `Hello from tRPC!!`,
+        curAssistantMessage: `Hello from tRPC!!`,
       };
     }),
 });
