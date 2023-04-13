@@ -14,34 +14,40 @@ const Home: NextPage = () => {
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
-  const { data, refetch } = api.chat.getResponse.useQuery({
+  const { data } = api.chat.getResponse.useQuery({
     messages: messages,
   }, {
-    enabled: false,
+    enabled: messages.length > 0 && messages[messages.length - 1]?.role === "user",
+    refetchOnWindowFocus: false,
   });
 
   const handleSendMessage = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    setMessages((prevMessages) => [...prevMessages, { role: "user", content: curUserMessage }]);
+
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { role: "user", content: curUserMessage },
+    ]);
     setCurUserMessage("");
   }
 
   useEffect(() => {
-    if (!messages.length) return;
-    void refetch();
-  }, [messages, refetch]);
+    if (!data) return;
+    setMessages((prevMessages) => [
+      ...prevMessages,
+      { role: "assistant", content: data.curAssistantMessage },
+    ]);
+  }, [data]);
 
   return (
     <>
-      {messages.map((m) => {
+      {messages.map((m, i) => {
         return (
-          <div key={m.content} className={m.role === "user" ? "bg-blue-100" : "bg-pink-100"}>
+          <div key={i} className={m.role === "user" ? "bg-blue-100" : "bg-pink-100"}>
             <div>{m.content}</div>
           </div>
         );
       })}
-
-      <div className="bg-yellow-100">{data?.curAssistantMessage}</div>
 
       <form onSubmit={handleSendMessage}>
         <input
