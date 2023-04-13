@@ -1,16 +1,11 @@
 import { type NextPage } from "next";
 import { type FormEvent, useState, useEffect } from "react";
-
+import type { ChatCompletionResponseMessage, ChatCompletionRequestMessage } from "openai";
 import { api } from "~/utils/api";
-
-type Message = {
-  role: "user" | "assistant" | "system",
-  content: string,
-};
 
 const Home: NextPage = () => {
   const [curUserMessage, setCurUserMessage] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
+  const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
@@ -33,9 +28,11 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     if (!data) return;
+    if (!data.curAssistantMessage) return;
+
     setMessages((prevMessages) => [
       ...prevMessages,
-      { role: "assistant", content: data.curAssistantMessage },
+      data.curAssistantMessage as ChatCompletionResponseMessage,
     ]);
   }, [data]);
 
