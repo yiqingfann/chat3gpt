@@ -19,6 +19,8 @@ const Home: NextPage = () => {
   const handleSendMessage = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
 
+    if (!curUserMessage.trim().length) return;
+
     setMessages((prevMessages) => [
       ...prevMessages,
       { role: "user", content: curUserMessage },
@@ -37,23 +39,37 @@ const Home: NextPage = () => {
   }, [data]);
 
   return (
-    <>
-      {messages.map((m, i) => {
-        return (
-          <div key={i} className={m.role === "user" ? "bg-blue-100" : "bg-pink-100"}>
-            <div>{m.content}</div>
-          </div>
-        );
-      })}
+    <div className="h-screen bg-[#343540] relative">
 
-      <form onSubmit={handleSendMessage}>
-        <input
-          value={curUserMessage}
-          onChange={(e) => setCurUserMessage(e.target.value)}
-        />
-        <button>Send</button>
-      </form>
-    </>
+      <div>
+        {messages.map((m, i) => {
+          return (
+            <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
+              <div className="text-white p-5">{m.content}</div>
+            </div>
+          );
+        })}
+      </div>
+
+      <div className="absolute bottom-0 sm:bottom-12 left-0 right-0">
+        <div className="bg-[#40414F] container mx-auto p-3 rounded-md">
+          <form
+            onSubmit={handleSendMessage}
+            className="flex"
+          >
+            <textarea
+              className="flex-1 bg-transparent text-white focus:outline-none resize-none h-auto"
+              rows={1}
+              placeholder="Write something..."
+              value={curUserMessage}
+              onChange={(e) => setCurUserMessage(e.target.value)}
+            />
+            <button className="px-2 text-white">Send</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
   );
 };
 

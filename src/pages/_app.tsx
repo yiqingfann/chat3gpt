@@ -18,15 +18,15 @@ const MyApp: AppType = ({ Component, pageProps }) => {
       <ClerkProvider {...pageProps}>
 
         <SignedIn>
-          <SignOutButton />
+          {/* <SignOutButton /> */}
           <Component {...pageProps} />
         </SignedIn>
 
-        <div className="h-screen w-screen flex justify-center items-center">
-          <SignedOut>
+        <SignedOut>
+          <div className="h-screen w-screen flex justify-center items-center">
             <SignIn signUpUrl="/" />
-          </SignedOut>
-        </div>
+          </div>
+        </SignedOut>
 
       </ClerkProvider>
     </>
