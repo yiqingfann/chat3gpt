@@ -92,7 +92,7 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     if (!dummyMessageRef.current) return;
-    console.log("here");
+
     dummyMessageRef.current.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
@@ -103,7 +103,9 @@ const Home: NextPage = () => {
         {messages.map((m, i) => {
           return (
             <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-              <div className="container mx-auto px-5 sm:px-48 py-5 text-white">{m.content}</div>
+              <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
+                {m.content}
+              </div>
             </div>
           );
         })}

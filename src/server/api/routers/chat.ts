@@ -18,17 +18,19 @@ export const chatRouter = createTRPCRouter({
       }))
     }))
     .query(async ({ input }) => {
-      console.log("---input", input);
+      console.log("---input", JSON.stringify(input, null, 2));
 
       const rsp = await openai.createChatCompletion({
         model: "gpt-3.5-turbo",
         messages: input.messages as ChatCompletionRequestMessage[],
       });
 
-      console.log(rsp.data.choices[0]?.message);
+      const curAssistantMessage = rsp.data.choices[0]?.message;
+
+      console.log("---curAssistantMessage", JSON.stringify(curAssistantMessage, null, 2));
 
       return {
-        curAssistantMessage: rsp.data.choices[0]?.message,
+        curAssistantMessage: curAssistantMessage,
       };
     }),
 });
