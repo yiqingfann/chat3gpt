@@ -1,7 +1,6 @@
 import { type NextPage } from "next";
 import { type FormEvent, type ChangeEvent, useState, useEffect, useRef, type SetStateAction } from "react";
 import type { ChatCompletionResponseMessage, ChatCompletionRequestMessage } from "openai";
-import { api } from "~/utils/api";
 import autosize from "autosize";
 
 type MessageInputProps = {
@@ -9,7 +8,7 @@ type MessageInputProps = {
 };
 
 type ChatApiResponseBody = {
-  curAssistantMessage: ChatCompletionRequestMessage;
+  curAssistantMessage: ChatCompletionResponseMessage;
 };
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
@@ -78,27 +77,30 @@ const Home: NextPage = () => {
 
   const dummyMessageRef = useRef<HTMLDivElement>(null);
 
-  const fetchChatResponse = async () => {
-    console.log("---fetchChatResponse");
-    const rsp = await fetch("/api/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ messages: messages }),
-    });
-    const data = await rsp.json() as ChatApiResponseBody;
-    console.log(`---data.curAssistantMessage = ${JSON.stringify(data.curAssistantMessage, null, 2)}`);
-  }
-
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
 
     // if latest message is from user, fetch response from API
     if (latestMessage.role === "user") {
+      const fetchChatResponse = async () => {
+        // get assistent message
+        const rsp = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: messages }),
+        });
+        const data = await rsp.json() as ChatApiResponseBody;
+
+        // save assistant message to state
+        setMessages((prevMessages) => [...prevMessages, data.curAssistantMessage]);
+      }
+
       void fetchChatResponse();
-    } else if (latestMessage.role === "assistant") {
-      dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
     }
+
+    // scroll conversation to bottom
+    dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
   return (
