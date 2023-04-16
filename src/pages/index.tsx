@@ -88,21 +88,30 @@ const Home: NextPage = () => {
     ]);
   }, [data]);
 
+  const dummyMessageRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!dummyMessageRef.current) return;
+    console.log("here");
+    dummyMessageRef.current.scrollIntoView({ behavior: "smooth" });
+  }, [messages]);
+
   return (
     <div className="h-screen bg-[#343540] relative">
 
-      <div>
+      <div className="h-screen overflow-auto">
         {messages.map((m, i) => {
           return (
             <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-              <div className="text-white p-5">{m.content}</div>
+              <div className="container mx-auto px-5 sm:px-48 py-5 text-white">{m.content}</div>
             </div>
           );
         })}
+        <div className="h-32" ref={dummyMessageRef} />
       </div>
 
-      <div className="absolute bottom-0 sm:bottom-12 left-0 right-0 flex justify-center">
-        <div className="bg-[#40414F] container p-3 rounded-md">
+      <div className="absolute left-0 right-0 bottom-0 py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
+        <div className="container mx-auto p-3 rounded-md bg-[#40414F]">
           <MessageInput setMessages={setMessages} />
         </div>
       </div>
