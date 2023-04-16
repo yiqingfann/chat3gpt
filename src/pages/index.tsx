@@ -8,6 +8,10 @@ type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
 
+type ChatApiResponseBody = {
+  curAssistantMessage: ChatCompletionRequestMessage;
+};
+
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
@@ -76,9 +80,13 @@ const Home: NextPage = () => {
 
   const fetchChatResponse = async () => {
     console.log("---fetchChatResponse");
-    const rsp = await fetch("/api/chat");
-    const data = await rsp.json();
-    console.log("---data", JSON.stringify(data, null, 2));
+    const rsp = await fetch("/api/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ messages: messages }),
+    });
+    const data = await rsp.json() as ChatApiResponseBody;
+    console.log(`---data.curAssistantMessage = ${JSON.stringify(data.curAssistantMessage, null, 2)}`);
   }
 
   useEffect(() => {
