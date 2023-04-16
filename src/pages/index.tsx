@@ -71,29 +71,26 @@ const Home: NextPage = () => {
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
-  const { data } = api.chat.getResponse.useQuery({
-    messages: messages,
-  }, {
-    enabled: messages.length > 0 && messages[messages.length - 1]?.role === "user",
-    refetchOnWindowFocus: false,
-  });
-
-  useEffect(() => {
-    if (!data) return;
-    if (!data.curAssistantMessage) return;
-
-    setMessages((prevMessages) => [
-      ...prevMessages,
-      data.curAssistantMessage as ChatCompletionResponseMessage,
-    ]);
-  }, [data]);
 
   const dummyMessageRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!dummyMessageRef.current) return;
+  const fetchChatResponse = async () => {
+    console.log("---fetchChatResponse");
+    const rsp = await fetch("/api/chat");
+    const data = await rsp.json();
+    console.log("---data", JSON.stringify(data, null, 2));
+  }
 
-    dummyMessageRef.current.scrollIntoView({ behavior: "smooth" });
+  useEffect(() => {
+    const latestMessage = messages[messages.length - 1];
+    if (!latestMessage) return;
+
+    // if latest message is from user, fetch response from API
+    if (latestMessage.role === "user") {
+      void fetchChatResponse();
+    } else if (latestMessage.role === "assistant") {
+      dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+    }
   }, [messages]);
 
   return (
