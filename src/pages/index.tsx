@@ -1,14 +1,12 @@
-import { type NextPage } from "next";
-import { type FormEvent, type ChangeEvent, useState, useEffect, useRef, type SetStateAction } from "react";
-import type { ChatCompletionResponseMessage, ChatCompletionRequestMessage } from "openai";
+import { useState, useEffect, useRef } from "react";
 import autosize from "autosize";
+
+import type { NextPage } from "next";
+import type { FormEvent, ChangeEvent, SetStateAction } from "react";
+import type { ChatCompletionRequestMessage } from "openai";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
-};
-
-type ChatApiResponseBody = {
-  curAssistantMessage: ChatCompletionResponseMessage;
 };
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
@@ -78,29 +76,52 @@ const Home: NextPage = () => {
   const dummyMessageRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const latestMessage = messages[messages.length - 1];
-    if (!latestMessage) return;
-
-    // if latest message is from user, fetch response from API
-    if (latestMessage.role === "user") {
-      const fetchChatResponse = async () => {
-        // get assistent message
-        const rsp = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: messages }),
-        });
-        const data = await rsp.json() as ChatApiResponseBody;
-
-        // save assistant message to state
-        setMessages((prevMessages) => [...prevMessages, data.curAssistantMessage]);
-      }
-
-      void fetchChatResponse();
-    }
-
     // scroll conversation to bottom
     dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+
+    const latestMessage = messages[messages.length - 1];
+    if (!latestMessage) return;
+    if (latestMessage.role === "assistant") return;
+
+    // fetch assistant message stream
+    const fetchAssistantMessageStream = async () => {
+      const rsp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: messages }),
+      });
+      if (!rsp.ok) throw new Error("Response not ok");
+
+      const data = rsp.body;
+      if (!data) throw new Error("No response body");
+
+      const reader = data.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let curAssistantMessage = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value);
+        curAssistantMessage += chunkValue;
+
+        setMessages((prevMessages) => {
+          const lastMessage = prevMessages[prevMessages.length - 1];
+          if (!lastMessage) return [];
+
+          const newMessages = [...prevMessages];
+          if (lastMessage.role === "user") {
+            newMessages.push({ role: "assistant", content: curAssistantMessage });
+          } else if (lastMessage.role === "assistant") {
+            newMessages[newMessages.length - 1] = { role: "assistant", content: curAssistantMessage };
+          }
+          return newMessages;
+        });
+      }
+    }
+
+    void fetchAssistantMessageStream();
   }, [messages]);
 
   return (
