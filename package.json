@@ -18,7 +18,7 @@
     "@trpc/react-query": "^10.18.0",
     "@trpc/server": "^10.18.0",
     "autosize": "^6.0.1",
-    "eventsource-parser": "^1.0.0",
+    "eventsource-parser": "^0.0.5",
     "next": "^13.2.4",
     "openai": "^3.2.1",
     "react": "18.2.0",

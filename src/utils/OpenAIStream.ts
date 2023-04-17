@@ -1,7 +1,9 @@
 // Reference: https://github.com/Nutlope/twitterbio
 
-import { createParser, type ParsedEvent, type ReconnectInterval } from "eventsource-parser";
-import { type ChatCompletionRequestMessage } from "openai";
+import { createParser } from "eventsource-parser";
+
+import type { ParsedEvent, ReconnectInterval } from "eventsource-parser";
+import type { ChatCompletionRequestMessage } from "openai";
 
 export interface OpenAIStreamPayload {
   model: string;
@@ -14,6 +16,16 @@ export interface OpenAIStreamPayload {
   max_tokens?: number;
   n?: number;
 }
+
+// for "stream: false" response, OpenAI API has a type called CreateChatCompletionResponse
+// for "stream: true" response, looks like OpenAI API haven't defined a type yet, so manually define it here to avoid elint complaining
+type CreateChatCompletionStreamResponse = {
+  choices: {
+    delta?: {
+      content?: string;
+    };
+  }[];
+};
 
 export async function OpenAIStream(payload: OpenAIStreamPayload) {
   const encoder = new TextEncoder();
@@ -42,8 +54,8 @@ export async function OpenAIStream(payload: OpenAIStreamPayload) {
             return;
           }
           try {
-            const json = JSON.parse(data);
-            const text = json.choices[0].delta?.content || "";
+            const json = JSON.parse(data) as CreateChatCompletionStreamResponse;
+            const text = json.choices[0]?.delta?.content || "";
             if (counter < 2 && (text.match(/\n/) || []).length) {
               // this is a prefix character (i.e., "\n\n"), do nothing
               return;
@@ -63,7 +75,7 @@ export async function OpenAIStream(payload: OpenAIStreamPayload) {
       const parser = createParser(onParse);
       // https://web.dev/streams/#asynchronous-iteration
       for await (const chunk of res.body as any) {
-        parser.feed(decoder.decode(chunk));
+        parser.feed(decoder.decode(chunk as BufferSource));
       }
     },
   });
