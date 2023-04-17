@@ -1,32 +1,29 @@
-import type { NextApiRequest, NextApiResponse } from "next";
-import { Configuration, type ChatCompletionRequestMessage, OpenAIApi } from "openai";
+import { OpenAIStream } from "~/utils/OpenAIStream";
 
-const config = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(config);
+import type { ChatCompletionRequestMessage } from "openai";
+import type { OpenAIStreamPayload } from "~/utils/OpenAIStream";
 
 type ChatApiRequestBody = {
-  messages: ChatCompletionRequestMessage[];
+  messages?: ChatCompletionRequestMessage[];
 };
 
-const handler = async (req: NextApiRequest, rsp: NextApiResponse) => {
+export const config = {
+  runtime: "edge",
+};
+
+const handler = async (req: Request) => {
   // extract messages from request
-  const messages = (req.body as ChatApiRequestBody).messages;
-  if (!messages) return rsp.status(400).json({ message: "Cannot find messages in request" });
+  const { messages } = await req.json() as ChatApiRequestBody;
+  if (!messages) return new Response("Cannot find messages in request", { status: 400 });
   console.log(`---messages = ${JSON.stringify(messages, null, 2)}`);
 
-  // invoke OpenAI API to get assistant message
-  const chatRsp = await openai.createChatCompletion({
+  const payload: OpenAIStreamPayload = {
     model: "gpt-3.5-turbo",
     messages: messages,
-  });
-  const curAssistantMessage = chatRsp.data.choices[0]?.message;
-  if (!curAssistantMessage) return rsp.status(502).json({ message: "Cannot get message from assistant" });
-  console.log(`---curAssistantMessage = ${JSON.stringify(curAssistantMessage, null, 2)}`);
-
-  // return assistant message
-  return rsp.status(200).json({ curAssistantMessage: curAssistantMessage });
+    stream: true,
+  };
+  const stream = await OpenAIStream(payload);
+  return new Response(stream);
 }
 
 export default handler;

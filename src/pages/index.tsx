@@ -1,14 +1,12 @@
-import { type NextPage } from "next";
-import { type FormEvent, type ChangeEvent, useState, useEffect, useRef, type SetStateAction } from "react";
-import type { ChatCompletionResponseMessage, ChatCompletionRequestMessage } from "openai";
+import { useState, useEffect, useRef } from "react";
 import autosize from "autosize";
+
+import type { NextPage } from "next";
+import type { FormEvent, ChangeEvent, SetStateAction } from "react";
+import type { ChatCompletionRequestMessage } from "openai";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
-};
-
-type ChatApiResponseBody = {
-  curAssistantMessage: ChatCompletionResponseMessage;
 };
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
@@ -75,38 +73,89 @@ const Home: NextPage = () => {
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
 
-  const dummyMessageRef = useRef<HTMLDivElement>(null);
+  const conversationAreaRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+
+  useEffect(() => {
+    // whenever the conversation area is scrolled, decide if should scroll to bottom later
+    const onScroll = () => {
+      if (!conversationAreaRef.current) return;
+      const { scrollTop, clientHeight, scrollHeight } = conversationAreaRef.current;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10 for some accuracy tolerance
+      setShouldScrollToBottom(isAtBottom);
+    }
+
+    conversationAreaRef.current?.addEventListener("scroll", onScroll);
+    return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
+    if (!shouldScrollToBottom) return;
+    if (!conversationAreaRef.current) return;
+
+    const conversationAreaDiv = conversationAreaRef.current;
+    conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+  }, [conversationAreaRef.current?.scrollHeight]);
 
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
+    if (latestMessage.role === "assistant") return;
 
-    // if latest message is from user, fetch response from API
-    if (latestMessage.role === "user") {
-      const fetchChatResponse = async () => {
-        // get assistent message
-        const rsp = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ messages: messages }),
-        });
-        const data = await rsp.json() as ChatApiResponseBody;
-
-        // save assistant message to state
-        setMessages((prevMessages) => [...prevMessages, data.curAssistantMessage]);
-      }
-
-      void fetchChatResponse();
+    // I think this is redundant, 
+    // but somehow useEffect for scrollHeight is not always fired after a user message is added to messages,
+    // so also scroll to bottom if nessessary here
+    if (shouldScrollToBottom && conversationAreaRef.current) {
+      const conversationAreaDiv = conversationAreaRef.current;
+      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
     }
 
-    // scroll conversation to bottom
-    dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+    // fetch assistant message stream
+    const fetchAssistantMessageStream = async () => {
+      const rsp = await fetch("/api/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ messages: messages }),
+      });
+      if (!rsp.ok) throw new Error("Response not ok");
+
+      const data = rsp.body;
+      if (!data) throw new Error("No response body");
+
+      const reader = data.getReader();
+      const decoder = new TextDecoder();
+      let done = false;
+      let curAssistantMessage = "";
+
+      while (!done) {
+        const { value, done: doneReading } = await reader.read();
+        done = doneReading;
+        const chunkValue = decoder.decode(value);
+        curAssistantMessage += chunkValue;
+
+        setMessages((prevMessages) => {
+          const lastMessage = prevMessages[prevMessages.length - 1];
+          if (!lastMessage) return [];
+
+          const newMessages = [...prevMessages];
+          if (lastMessage.role === "user") {
+            newMessages.push({ role: "assistant", content: curAssistantMessage });
+          } else if (lastMessage.role === "assistant") {
+            newMessages[newMessages.length - 1] = { role: "assistant", content: curAssistantMessage };
+          }
+          return newMessages;
+        });
+      }
+    }
+
+    void fetchAssistantMessageStream();
   }, [messages]);
 
   return (
     <div className="h-screen bg-[#343540] relative">
 
-      <div className="h-screen overflow-auto">
+      <div className="h-screen overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
           return (
             <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
@@ -116,7 +165,7 @@ const Home: NextPage = () => {
             </div>
           );
         })}
-        <div className="h-32" ref={dummyMessageRef} />
+        <div className="h-32" />
       </div>
 
       <div className="absolute left-0 right-0 bottom-0 py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
