@@ -153,9 +153,8 @@ const Home: NextPage = () => {
   }, [messages]);
 
   return (
-    <div className="h-screen bg-[#343540] relative">
-
-      <div className="h-screen overflow-auto" ref={conversationAreaRef}>
+    <>
+      <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
           return (
             <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
@@ -168,13 +167,12 @@ const Home: NextPage = () => {
         <div className="h-32" />
       </div>
 
-      <div className="absolute left-0 right-0 bottom-0 py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
+      <div className="absolute left-0 right-0 bottom-0 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
         <div className="container mx-auto p-3 rounded-md bg-[#40414F]">
           <MessageInput setMessages={setMessages} />
         </div>
       </div>
-
-    </div>
+    </>
   );
 };
 
