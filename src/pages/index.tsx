@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import autosize from "autosize";
 
 import type { NextPage } from "next";
-import type { FormEvent, ChangeEvent, SetStateAction } from "react";
+import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
 import type { ChatCompletionRequestMessage } from "openai";
 
 type MessageInputProps = {
@@ -32,8 +32,8 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
     textAreaRef.current.style.overflow = "auto";
   }
 
-  const handleSendMessage = (e: FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
+  const handleSendMessage = (e?: FormEvent<HTMLFormElement>) => {
+    e?.preventDefault();
 
     // update messages state to trigger RPC
     if (curUserMessage.trim().length) {
@@ -49,6 +49,13 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
     textAreaRef.current.style.height = "auto";
   }
 
+  const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  }
+
   return (
     <form
       onSubmit={handleSendMessage}
@@ -61,6 +68,7 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
         placeholder="Write something..."
         value={curUserMessage}
         onChange={handleInputChange}
+        onKeyDown={handleKeyDown}
       />
       <button className="px-2 text-white">Send</button>
     </form>
