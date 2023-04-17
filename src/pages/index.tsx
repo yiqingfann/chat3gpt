@@ -73,15 +73,43 @@ const Home: NextPage = () => {
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
 
-  const dummyMessageRef = useRef<HTMLDivElement>(null);
+  const conversationAreaRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
   useEffect(() => {
-    // scroll conversation to bottom
-    dummyMessageRef.current?.scrollIntoView({ behavior: "smooth" });
+    // whenever the conversation area is scrolled, decide if should scroll to bottom later
+    const onScroll = () => {
+      if (!conversationAreaRef.current) return;
+      const { scrollTop, clientHeight, scrollHeight } = conversationAreaRef.current;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10 for some accuracy tolerance
+      setShouldScrollToBottom(isAtBottom);
+    }
 
+    conversationAreaRef.current?.addEventListener("scroll", onScroll);
+    return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
+    if (!shouldScrollToBottom) return;
+    if (!conversationAreaRef.current) return;
+
+    const conversationAreaDiv = conversationAreaRef.current;
+    conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+  }, [conversationAreaRef.current?.scrollHeight]);
+
+  useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
     if (latestMessage.role === "assistant") return;
+
+    // I think this is redundant, 
+    // but somehow useEffect for scrollHeight is not always fired after a user message is added to messages,
+    // so also scroll to bottom if nessessary here
+    if (shouldScrollToBottom && conversationAreaRef.current) {
+      const conversationAreaDiv = conversationAreaRef.current;
+      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+    }
 
     // fetch assistant message stream
     const fetchAssistantMessageStream = async () => {
@@ -127,7 +155,7 @@ const Home: NextPage = () => {
   return (
     <div className="h-screen bg-[#343540] relative">
 
-      <div className="h-screen overflow-auto">
+      <div className="h-screen overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
           return (
             <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
@@ -137,7 +165,7 @@ const Home: NextPage = () => {
             </div>
           );
         })}
-        <div className="h-32" ref={dummyMessageRef} />
+        <div className="h-32" />
       </div>
 
       <div className="absolute left-0 right-0 bottom-0 py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
