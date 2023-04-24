@@ -4,9 +4,14 @@ import autosize from "autosize";
 import type { NextPage } from "next";
 import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
 import type { ChatCompletionRequestMessage } from "openai";
+import type { Message } from "~/types";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
+};
+
+type PersistMessageResponse = {
+  message: Message,
 };
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
@@ -104,7 +109,7 @@ const Home: NextPage = () => {
 
     const conversationAreaDiv = conversationAreaRef.current;
     conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-  }, [conversationAreaRef.current?.scrollHeight]);
+  }, [conversationAreaRef.current?.scrollHeight, shouldScrollToBottom]);
 
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
@@ -117,6 +122,16 @@ const Home: NextPage = () => {
     if (shouldScrollToBottom && conversationAreaRef.current) {
       const conversationAreaDiv = conversationAreaRef.current;
       conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+    }
+
+    const persistMessagetoDb = async (message: Message) => {
+      const rsp = await fetch("/api/persist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(message),
+      });
+      const data = await rsp.json() as PersistMessageResponse;
+      console.log(`---data.message = ${JSON.stringify(data.message, null, 2)}`);
     }
 
     // fetch assistant message stream
@@ -135,6 +150,7 @@ const Home: NextPage = () => {
       const decoder = new TextDecoder();
       let done = false;
       let curAssistantMessage = "";
+      const messageNum = messages.length;
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -155,10 +171,30 @@ const Home: NextPage = () => {
           return newMessages;
         });
       }
+
+      const message: Message = {
+        conversationId: "123",
+        messageNum: messageNum,
+        role: "assistant",
+        content: curAssistantMessage,
+      };
+      await persistMessagetoDb(message);
     }
 
-    void fetchAssistantMessageStream();
-  }, [messages]);
+    const persistAndFetch = async () => {
+      // persist user message to db
+      const message: Message = {
+        conversationId: "123",
+        messageNum: messages.length - 1,
+        role: latestMessage.role,
+        content: latestMessage.content,
+      };
+      await persistMessagetoDb(message);
+      await fetchAssistantMessageStream();
+    }
+
+    void persistAndFetch();
+  }, [messages, shouldScrollToBottom]);
 
   return (
     <>
