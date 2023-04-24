@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import autosize from "autosize";
+import uuid from "react-uuid";
 
 import type { NextPage } from "next";
 import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
@@ -10,9 +11,9 @@ type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
 
-type PersistMessageResponse = {
-  message: Message,
-};
+// type PersistMessageResponse = {
+//   message: Message,
+// };
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
@@ -81,6 +82,7 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
 }
 
 const Home: NextPage = () => {
+  const [conversationId, setConversationId] = useState<string>(uuid());
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
@@ -89,6 +91,7 @@ const Home: NextPage = () => {
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
+  // listen for user scroll
   useEffect(() => {
     // whenever the conversation area is scrolled, decide if should scroll to bottom later
     const onScroll = () => {
@@ -102,6 +105,7 @@ const Home: NextPage = () => {
     return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
   }, []);
 
+  // auto scroll to bottom when new messages are added
   useEffect(() => {
     // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
     if (!shouldScrollToBottom) return;
@@ -109,8 +113,9 @@ const Home: NextPage = () => {
 
     const conversationAreaDiv = conversationAreaRef.current;
     conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-  }, [conversationAreaRef.current?.scrollHeight, shouldScrollToBottom]);
+  }, [conversationAreaRef.current?.scrollHeight]);
 
+  // fetch assistant message when user message is added
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
@@ -125,13 +130,13 @@ const Home: NextPage = () => {
     }
 
     const persistMessagetoDb = async (message: Message) => {
-      const rsp = await fetch("/api/persist", {
+      await fetch("/api/persist", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(message),
       });
-      const data = await rsp.json() as PersistMessageResponse;
-      console.log(`---data.message = ${JSON.stringify(data.message, null, 2)}`);
+      // const data = await rsp.json() as PersistMessageResponse;
+      // console.log(`---data.message = ${JSON.stringify(data.message, null, 2)}`);
     }
 
     // fetch assistant message stream
@@ -150,7 +155,6 @@ const Home: NextPage = () => {
       const decoder = new TextDecoder();
       let done = false;
       let curAssistantMessage = "";
-      const messageNum = messages.length;
 
       while (!done) {
         const { value, done: doneReading } = await reader.read();
@@ -172,29 +176,35 @@ const Home: NextPage = () => {
         });
       }
 
-      const message: Message = {
-        conversationId: "123",
-        messageNum: messageNum,
-        role: "assistant",
-        content: curAssistantMessage,
-      };
-      await persistMessagetoDb(message);
+      return curAssistantMessage;
     }
 
     const persistAndFetch = async () => {
       // persist user message to db
-      const message: Message = {
-        conversationId: "123",
-        messageNum: messages.length - 1,
-        role: latestMessage.role,
-        content: latestMessage.content,
+      const userMessageNum = messages.length - 1;
+      const userMessageContent = latestMessage.content;
+      const userMessage: Message = {
+        conversationId: conversationId,
+        messageNum: userMessageNum,
+        role: "user",
+        content: userMessageContent,
       };
-      await persistMessagetoDb(message);
-      await fetchAssistantMessageStream();
+      await persistMessagetoDb(userMessage);
+
+      // persist assistant message to db
+      const assistantMessageNum = userMessageNum + 1;
+      const assistantMessageContent = await fetchAssistantMessageStream();
+      const assistantMessage: Message = {
+        conversationId: conversationId,
+        messageNum: assistantMessageNum,
+        role: "assistant",
+        content: assistantMessageContent,
+      };
+      await persistMessagetoDb(assistantMessage);
     }
 
     void persistAndFetch();
-  }, [messages, shouldScrollToBottom]);
+  }, [messages]);
 
   return (
     <>

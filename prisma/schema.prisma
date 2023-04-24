@@ -27,7 +27,7 @@ model Message {
   conversationId String
   messageNum     Int
   role           Role
-  content        String
+  content        String @db.LongText
 
   @@id([conversationId, messageNum])
 }
