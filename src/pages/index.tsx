@@ -11,9 +11,26 @@ type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
 
+type Conversation = {
+  conversation: {
+    conversationId: string,
+    title: string,
+    createdAt: string,
+    userId: string,
+  },
+}
+
 // type PersistMessageResponse = {
 //   message: Message,
 // };
+
+const persistMessagetoDb = async (message: Message) => {
+  await fetch("/api/persist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message),
+  });
+}
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
@@ -82,7 +99,7 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
 }
 
 const Home: NextPage = () => {
-  const [conversationId, setConversationId] = useState<string>(uuid());
+  const [conversationId, setConversationId] = useState("");
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
@@ -127,16 +144,6 @@ const Home: NextPage = () => {
     if (shouldScrollToBottom && conversationAreaRef.current) {
       const conversationAreaDiv = conversationAreaRef.current;
       conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-    }
-
-    const persistMessagetoDb = async (message: Message) => {
-      await fetch("/api/persist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(message),
-      });
-      // const data = await rsp.json() as PersistMessageResponse;
-      // console.log(`---data.message = ${JSON.stringify(data.message, null, 2)}`);
     }
 
     // fetch assistant message stream
@@ -206,8 +213,23 @@ const Home: NextPage = () => {
     void persistAndFetch();
   }, [messages]);
 
+  const handleClickNewConversation = async () => {
+    const rsp = await fetch("/api/conversations", { method: "POST" });
+    const data = await rsp.json() as Conversation;
+    console.log(`---data = ${JSON.stringify(data, null, 2)}`);
+    const conversationId = data.conversation.conversationId;
+    setConversationId(conversationId);
+  }
+
   return (
     <>
+      <button
+        className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
+        onClick={() => void handleClickNewConversation()}
+      >
+        + New Conversation
+      </button>
+
       <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
           return (

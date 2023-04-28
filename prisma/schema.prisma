@@ -31,3 +31,10 @@ model Message {
 
   @@id([conversationId, messageNum])
 }
+
+model Conversation {
+  conversationId String   @id @default(uuid())
+  title          String   @default("New Conversation")
+  createdAt      DateTime @default(now())
+  userId         String
+}
