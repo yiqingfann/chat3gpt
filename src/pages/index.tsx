@@ -108,6 +108,11 @@ const Home: NextPage = () => {
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
+  // create a new conversation when page loads
+  useEffect(() => {
+    void handleClickNewConversation();
+  }, []);
+
   // listen for user scroll
   useEffect(() => {
     // whenever the conversation area is scrolled, decide if should scroll to bottom later
@@ -221,14 +226,22 @@ const Home: NextPage = () => {
     setConversationId(conversationId);
   }
 
+  if (!conversationId.length) {
+    return (
+      <div className="h-screen w-screen flex justify-center items-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+      </div>
+    );
+  }
+
   return (
     <>
-      <button
+      {/* <button
         className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
         onClick={() => void handleClickNewConversation()}
       >
         + New Conversation
-      </button>
+      </button> */}
 
       <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
