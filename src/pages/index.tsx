@@ -1,13 +1,36 @@
 import { useState, useEffect, useRef } from "react";
 import autosize from "autosize";
+import uuid from "react-uuid";
 
 import type { NextPage } from "next";
 import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
 import type { ChatCompletionRequestMessage } from "openai";
+import type { Message } from "~/types";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
+
+type Conversation = {
+  conversation: {
+    conversationId: string,
+    title: string,
+    createdAt: string,
+    userId: string,
+  },
+}
+
+// type PersistMessageResponse = {
+//   message: Message,
+// };
+
+const persistMessagetoDb = async (message: Message) => {
+  await fetch("/api/persist", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(message),
+  });
+}
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
@@ -76,6 +99,7 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
 }
 
 const Home: NextPage = () => {
+  const [conversationId, setConversationId] = useState("");
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
@@ -84,6 +108,12 @@ const Home: NextPage = () => {
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
 
+  // create a new conversation when page loads
+  useEffect(() => {
+    void handleClickNewConversation();
+  }, []);
+
+  // listen for user scroll
   useEffect(() => {
     // whenever the conversation area is scrolled, decide if should scroll to bottom later
     const onScroll = () => {
@@ -97,6 +127,7 @@ const Home: NextPage = () => {
     return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
   }, []);
 
+  // auto scroll to bottom when new messages are added
   useEffect(() => {
     // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
     if (!shouldScrollToBottom) return;
@@ -106,6 +137,7 @@ const Home: NextPage = () => {
     conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
   }, [conversationAreaRef.current?.scrollHeight]);
 
+  // fetch assistant message when user message is added
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
@@ -155,13 +187,62 @@ const Home: NextPage = () => {
           return newMessages;
         });
       }
+
+      return curAssistantMessage;
     }
 
-    void fetchAssistantMessageStream();
+    const persistAndFetch = async () => {
+      // persist user message to db
+      const userMessageNum = messages.length - 1;
+      const userMessageContent = latestMessage.content;
+      const userMessage: Message = {
+        conversationId: conversationId,
+        messageNum: userMessageNum,
+        role: "user",
+        content: userMessageContent,
+      };
+      await persistMessagetoDb(userMessage);
+
+      // persist assistant message to db
+      const assistantMessageNum = userMessageNum + 1;
+      const assistantMessageContent = await fetchAssistantMessageStream();
+      const assistantMessage: Message = {
+        conversationId: conversationId,
+        messageNum: assistantMessageNum,
+        role: "assistant",
+        content: assistantMessageContent,
+      };
+      await persistMessagetoDb(assistantMessage);
+    }
+
+    void persistAndFetch();
   }, [messages]);
+
+  const handleClickNewConversation = async () => {
+    const rsp = await fetch("/api/conversations", { method: "POST" });
+    const data = await rsp.json() as Conversation;
+    console.log(`---data = ${JSON.stringify(data, null, 2)}`);
+    const conversationId = data.conversation.conversationId;
+    setConversationId(conversationId);
+  }
+
+  if (!conversationId.length) {
+    return (
+      <div className="h-screen w-screen flex justify-center items-center">
+        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+      </div>
+    );
+  }
 
   return (
     <>
+      {/* <button
+        className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
+        onClick={() => void handleClickNewConversation()}
+      >
+        + New Conversation
+      </button> */}
+
       <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
         {messages.map((m, i) => {
           return (

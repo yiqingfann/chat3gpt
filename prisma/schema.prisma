@@ -1,17 +1,40 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-generator client {
-    provider = "prisma-client-js"
-}
-
 datasource db {
-    provider = "sqlite"
-    url      = env("DATABASE_URL")
+  provider     = "mysql"
+  url          = env("DATABASE_URL")
+  relationMode = "prisma"
 }
 
-model Example {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum Role {
+  user
+  assistant
+  system
+}
+
+// model Example {
+//   id        String   @id @default(cuid())
+//   createdAt DateTime @default(now())
+//   updatedAt DateTime @updatedAt
+// }
+
+model Message {
+  conversationId String
+  messageNum     Int
+  role           Role
+  content        String @db.LongText
+
+  @@id([conversationId, messageNum])
+}
+
+model Conversation {
+  conversationId String   @id @default(uuid())
+  title          String   @default("New Conversation")
+  createdAt      DateTime @default(now())
+  userId         String
 }
