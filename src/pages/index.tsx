@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch } from "react";
 import autosize from "autosize";
 import uuid from "react-uuid";
 
@@ -8,6 +8,7 @@ import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage } from "@fortawesome/free-regular-svg-icons";
+import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
@@ -20,6 +21,10 @@ type Conversation = {
   userId: string,
 };
 
+type HistoryConversationsProps = {
+  setConversationId: Dispatch<SetStateAction<string>>,
+};
+
 // type PersistMessageResponse = {
 //   message: Message,
 // };
@@ -30,6 +35,18 @@ const persistMessagetoDb = async (message: Message) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(message),
   });
+}
+
+const fetchAllConversations = async () => {
+  const rsp = await fetch("/api/conversations");
+  const data = await rsp.json() as { conversations: Conversation[] };
+  return data.conversations;
+}
+
+const createNewConversation = async () => {
+  const rsp = await fetch("/api/conversations", { method: "POST" });
+  const data = await rsp.json() as { conversation: Conversation };
+  return data.conversation;
 }
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
@@ -98,21 +115,34 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
   );
 }
 
-const HistoryConversations = () => {
+const HistoryConversations = ({ setConversationId }: HistoryConversationsProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
+  const handleClickNewConversation = async () => {
+    const newConversation = await createNewConversation();
+    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
+    setConversations(allConversations);
+    setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
+  }
+
   useEffect(() => {
-    const fetchHistoryConversations = async () => {
-      const rsp = await fetch("/api/conversations");
-      const data = await rsp.json() as { conversations: Conversation[] };
-      setConversations(data.conversations);
+    const init = async () => {
+      const allConversations = await fetchAllConversations();
+      setConversations(allConversations);
     }
 
-    void fetchHistoryConversations();
+    void init();
   }, []);
 
   return (
     <div className="w-64 bg-[#202123] p-2 space-y-2 overflow-auto">
+      <button
+        className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
+        onClick={() => void handleClickNewConversation()}
+      >
+        <FontAwesomeIcon icon={faPlus} size="sm" />
+        <div className="text-sm">New Conversation</div>
+      </button>
 
       {conversations.map((c) => {
         return (
@@ -128,7 +158,7 @@ const HistoryConversations = () => {
 }
 
 const Home: NextPage = () => {
-  const [conversationId, setConversationId] = useState("");
+  const [conversationId, setConversationId] = useState(""); // Q: empty string or null?
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
@@ -136,11 +166,6 @@ const Home: NextPage = () => {
 
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
-
-  // create a new conversation when page loads
-  useEffect(() => {
-    void handleClickNewConversation();
-  }, []);
 
   // listen for user scroll
   useEffect(() => {
@@ -247,34 +272,19 @@ const Home: NextPage = () => {
     void persistAndFetch();
   }, [messages]);
 
-  const handleClickNewConversation = async () => {
-    const rsp = await fetch("/api/conversations", { method: "POST" });
-    const data = await rsp.json() as { conversation: Conversation };
-    console.log(`---data = ${JSON.stringify(data, null, 2)}`);
-    const conversationId = data.conversation.conversationId;
-    setConversationId(conversationId);
-  }
-
-  if (!conversationId.length) {
-    return (
-      <div className="h-screen w-screen flex justify-center items-center">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
-      </div>
-    );
-  }
+  // if (!conversationId.length) {
+  //   return (
+  //     <div className="h-screen w-screen flex justify-center items-center">
+  //       <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
-      {/* <button
-        className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
-        onClick={() => void handleClickNewConversation()}
-      >
-        + New
-      </button> */}
-
       <div className="absolute left-0 right-0 top-0 bottom-0 flex">
         {/* side bar */}
-        <HistoryConversations />
+        <HistoryConversations setConversationId={setConversationId} />
 
         {/* conversation area */}
         <div className="grow relative">
