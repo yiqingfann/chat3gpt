@@ -6,6 +6,8 @@ import type { NextPage } from "next";
 import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
 import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMessage } from "@fortawesome/free-regular-svg-icons";
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
@@ -243,22 +245,35 @@ const Home: NextPage = () => {
         + New Conversation
       </button> */}
 
-      <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
-        {messages.map((m, i) => {
-          return (
-            <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-              <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
-                {m.content}
-              </div>
-            </div>
-          );
-        })}
-        <div className="h-32" />
-      </div>
+      <div className="absolute left-0 right-0 top-0 bottom-0 flex">
+        {/* side bar */}
+        <div className="w-64 bg-[#202123] p-2 space-y-2">
+          <div className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2">
+            <FontAwesomeIcon icon={faMessage} size="sm" />
+            <div className="text-sm">Hello World 1</div>
+          </div>
+        </div>
 
-      <div className="absolute left-0 right-0 bottom-0 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
-        <div className="container mx-auto p-3 rounded-md bg-[#40414F]">
-          <MessageInput setMessages={setMessages} />
+        {/* conversation area */}
+        <div className="grow relative">
+          <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
+            {messages.map((m, i) => {
+              return (
+                <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
+                  <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
+                    {m.content}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="h-32" />
+          </div>
+
+          <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
+            <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
+              <MessageInput setMessages={setMessages} />
+            </div>
+          </div>
         </div>
       </div>
     </>
