@@ -9,10 +9,18 @@ const handler = async (req: NextApiRequest, rsp: NextApiResponse) => {
   const { userId } = getAuth(req);
   if (!userId) return rsp.status(401).json({ error: "Unauthorized" });
 
-  // save new conversation to database
-  const conversation = await prisma.conversation.create({ data: { userId: userId } });
-
-  return rsp.status(200).json({ conversation });
+  if (req.method === "GET") {
+    // get all conversations for user
+    const conversations = await prisma.conversation.findMany({
+      where: { userId: userId },
+      orderBy: { createdAt: "desc" },
+    });
+    return rsp.status(200).json({ conversations });
+  } else if (req.method === "POST") {
+    // save new conversation to database
+    const conversation = await prisma.conversation.create({ data: { userId: userId } });
+    return rsp.status(200).json({ conversation });
+  }
 }
 
 export default handler;

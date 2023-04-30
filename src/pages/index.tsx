@@ -14,13 +14,11 @@ type MessageInputProps = {
 };
 
 type Conversation = {
-  conversation: {
-    conversationId: string,
-    title: string,
-    createdAt: string,
-    userId: string,
-  },
-}
+  conversationId: string,
+  title: string,
+  createdAt: string,
+  userId: string,
+};
 
 // type PersistMessageResponse = {
 //   message: Message,
@@ -97,6 +95,35 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
       />
       <button className="px-2 text-white">Send</button>
     </form>
+  );
+}
+
+const HistoryConversations = () => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+
+  useEffect(() => {
+    const fetchHistoryConversations = async () => {
+      const rsp = await fetch("/api/conversations");
+      const data = await rsp.json() as { conversations: Conversation[] };
+      setConversations(data.conversations);
+    }
+
+    void fetchHistoryConversations();
+  }, []);
+
+  return (
+    <div className="w-64 bg-[#202123] p-2 space-y-2 overflow-auto">
+
+      {conversations.map((c) => {
+        return (
+          <div className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2" key={c.conversationId}>
+            <FontAwesomeIcon icon={faMessage} size="sm" />
+            <div className="text-sm">{c.conversationId}</div>
+          </div>
+        );
+      })}
+
+    </div>
   );
 }
 
@@ -222,7 +249,7 @@ const Home: NextPage = () => {
 
   const handleClickNewConversation = async () => {
     const rsp = await fetch("/api/conversations", { method: "POST" });
-    const data = await rsp.json() as Conversation;
+    const data = await rsp.json() as { conversation: Conversation };
     console.log(`---data = ${JSON.stringify(data, null, 2)}`);
     const conversationId = data.conversation.conversationId;
     setConversationId(conversationId);
@@ -242,17 +269,12 @@ const Home: NextPage = () => {
         className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
         onClick={() => void handleClickNewConversation()}
       >
-        + New Conversation
+        + New
       </button> */}
 
       <div className="absolute left-0 right-0 top-0 bottom-0 flex">
         {/* side bar */}
-        <div className="w-64 bg-[#202123] p-2 space-y-2">
-          <div className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2">
-            <FontAwesomeIcon icon={faMessage} size="sm" />
-            <div className="text-sm">Hello World 1</div>
-          </div>
-        </div>
+        <HistoryConversations />
 
         {/* conversation area */}
         <div className="grow relative">
