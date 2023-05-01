@@ -19,6 +19,7 @@ const handler = async (req: NextApiRequest, rsp: NextApiResponse) => {
   // get all messags in a conversation
   const messages = await prisma.message.findMany({
     where: { conversationId: conversationId as string },
+    select: { role: true, content: true },
     orderBy: { messageNum: "asc" },
   });
   return rsp.status(200).json({ messages });
