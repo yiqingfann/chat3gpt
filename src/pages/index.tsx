@@ -10,6 +10,8 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage } from "@fortawesome/free-regular-svg-icons";
 import { faPlus } from "@fortawesome/free-solid-svg-icons";
 
+// ------------------types------------------
+
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
@@ -25,9 +27,7 @@ type HistoryConversationsProps = {
   setConversationId: Dispatch<SetStateAction<string>>,
 };
 
-// type PersistMessageResponse = {
-//   message: Message,
-// };
+// ------------------utils to interact with database------------------
 
 const persistMessagetoDb = async (message: Message) => {
   await fetch("/api/persist", {
@@ -48,6 +48,14 @@ const createNewConversation = async () => {
   const data = await rsp.json() as { conversation: Conversation };
   return data.conversation;
 }
+
+const fetchAllMessages = async (conversationId: string) => {
+  const rsp = await fetch(`/api/messages?conversationId=${conversationId}`); // Q: better way to pass query params?
+  const data = await rsp.json() as { messages: Message[] };
+  return data.messages;
+}
+
+// ------------------components------------------
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
@@ -146,16 +154,21 @@ const HistoryConversations = ({ setConversationId }: HistoryConversationsProps) 
 
       {conversations.map((c) => {
         return (
-          <div className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2" key={c.conversationId}>
+          <button
+            className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2" key={c.conversationId}
+            onClick={() => setConversationId(c.conversationId)}
+          >
             <FontAwesomeIcon icon={faMessage} size="sm" />
             <div className="text-sm">{c.conversationId}</div>
-          </div>
+          </button>
         );
       })}
 
     </div>
   );
 }
+
+// ------------------main component------------------
 
 const Home: NextPage = () => {
   const [conversationId, setConversationId] = useState(""); // Q: empty string or null?
@@ -271,6 +284,18 @@ const Home: NextPage = () => {
 
     void persistAndFetch();
   }, [messages]);
+
+  // fetch and display all messages when conversationId changes
+  useEffect(() => {
+    if (!conversationId.length) return;
+
+    const updateAllMessages = async () => {
+      const allMessages = await fetchAllMessages(conversationId);
+      setMessages(allMessages);
+    }
+
+    void updateAllMessages();
+  }, [conversationId]);
 
   // if (!conversationId.length) {
   //   return (
