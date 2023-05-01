@@ -24,6 +24,7 @@ type Conversation = {
 };
 
 type HistoryConversationsProps = {
+  conversationId: string,
   setConversationId: Dispatch<SetStateAction<string>>,
 };
 
@@ -123,7 +124,7 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
   );
 }
 
-const HistoryConversations = ({ setConversationId }: HistoryConversationsProps) => {
+const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
 
   const handleClickNewConversation = async () => {
@@ -155,8 +156,12 @@ const HistoryConversations = ({ setConversationId }: HistoryConversationsProps) 
       {conversations.map((c) => {
         return (
           <button
-            className="p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2" key={c.conversationId}
+            className={(c.conversationId === conversationId)
+              ? "p-3 rounded-lg bg-white/20 text-white flex items-center space-x-2"
+              : "p-3 rounded-lg hover:bg-white/10 text-white flex items-center space-x-2" // Q: avoid redundent with ``, but tailwind doesn't like it?
+            }
             onClick={() => setConversationId(c.conversationId)}
+            key={c.conversationId}
           >
             <FontAwesomeIcon icon={faMessage} size="sm" />
             <div className="text-sm">{c.conversationId}</div>
@@ -309,7 +314,7 @@ const Home: NextPage = () => {
     <>
       <div className="absolute left-0 right-0 top-0 bottom-0 flex">
         {/* side bar */}
-        <HistoryConversations setConversationId={setConversationId} />
+        <HistoryConversations conversationId={conversationId} setConversationId={setConversationId} />
 
         {/* conversation area */}
         <div className="grow relative">
