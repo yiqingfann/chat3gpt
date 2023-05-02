@@ -7,8 +7,8 @@ import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "reac
 import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage } from "@fortawesome/free-regular-svg-icons";
-import { faPlus } from "@fortawesome/free-solid-svg-icons";
+import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
+import { faCheck, faPencil, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
 
 // ------------------types------------------
 
@@ -54,6 +54,20 @@ const fetchAllMessages = async (conversationId: string) => {
   const rsp = await fetch(`/api/messages?conversationId=${conversationId}`); // Q: better way to pass query params?
   const data = await rsp.json() as { messages: Message[] };
   return data.messages;
+}
+
+const updateConversationTitle = async (conversationId: string, newTitle: string) => {
+  await fetch(`/api/conversations?conversationId=${conversationId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ newTitle }),
+  });
+}
+
+const deleteConversation = async (conversationId: string) => {
+  await fetch(`/api/conversations?conversationId=${conversationId}`, {
+    method: "DELETE"
+  });
 }
 
 // ------------------components------------------
@@ -126,12 +140,41 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
 
 const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newTitle, setNewTitle] = useState<string | null>(null);
 
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
     const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
     setConversations(allConversations);
     setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
+  }
+
+  const hancleClickEdit = (conversationId: string) => {
+    console.log("edit conversation", conversationId);
+    setIsEditing(true);
+  }
+
+  const handleConfirmEdit = async (conversationId: string, newTitle: string, idx: number) => {
+    await updateConversationTitle(conversationId, newTitle);
+    const _conversations = [...conversations];
+    _conversations[idx]!.title = newTitle;
+    setConversations(_conversations);
+    setIsEditing(false);
+    setNewTitle(null);
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setNewTitle(null);
+  }
+
+  const handleClickDelete = async (conversationId: string, idx: number) => {
+    await deleteConversation(conversationId);
+    const _conversations = [...conversations];
+    _conversations.splice(idx, 1);
+    setConversations(_conversations);
+    setConversationId("");
   }
 
   useEffect(() => {
@@ -153,23 +196,66 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
         <div className="text-sm">New Conversation</div>
       </button>
 
-      {conversations.map((c) => {
+      {conversations.map((c, idx) => {
+        const isActive = c.conversationId === conversationId;
+
         return (
           <button
-            className={(c.conversationId === conversationId)
-              ? "p-3 rounded-lg bg-white/20 text-white flex items-center space-x-2"
-              : "p-3 rounded-lg hover:bg-white/10 text-white flex items-center space-x-2" // Q: avoid redundent with ``, but tailwind doesn't like it?
-            }
-            onClick={() => setConversationId(c.conversationId)}
             key={c.conversationId}
+            className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
           >
-            <FontAwesomeIcon icon={faMessage} size="sm" />
-            <div className="text-sm">{c.conversationId}</div>
+            <div
+              className="flex items-center space-x-2"
+              onClick={() => setConversationId(c.conversationId)}
+            >
+              <FontAwesomeIcon icon={faMessage} size="sm" />
+
+              {isActive && isEditing
+                ? (
+                  <input
+                    className="bg-transparent text-sm"
+                    value={newTitle ?? c.title}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    autoFocus={true}
+                  />
+                )
+                : (
+                  <div className="text-sm">
+                    {c.title}
+                  </div>
+                )
+              }
+
+            </div>
+
+            {
+              isActive && (
+                <div>
+                  {isEditing
+                    ? (
+                      <div className="flex items-center space-x-2">
+                        <FontAwesomeIcon icon={faCheck} size="sm" className="hover:text-pink-400" onClick={() => {
+                          if (!newTitle) return;
+                          void handleConfirmEdit(c.conversationId, newTitle, idx);
+                        }}
+                        />
+                        <FontAwesomeIcon icon={faXmark} size="sm" className="hover:text-pink-400" onClick={handleCancelEdit} />
+                      </div>
+                    )
+                    : (
+                      <div className="flex items-center space-x-2">
+                        <FontAwesomeIcon icon={faPencil} size="sm" className="hover:text-pink-400" onClick={() => hancleClickEdit(c.conversationId)} />
+                        <FontAwesomeIcon icon={faTrashCan} size="sm" className="hover:text-pink-400" onClick={() => void handleClickDelete(c.conversationId, idx)} />
+                      </div>
+                    )}
+                </div>
+              )
+            }
           </button>
         );
       })}
 
-    </div>
+    </div >
   );
 }
 
