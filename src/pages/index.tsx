@@ -205,7 +205,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
             className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
           >
             <div
-              className="flex items-center space-x-2"
+              className="flex items-center space-x-2 min-w-0"
               onClick={() => setConversationId(c.conversationId)}
             >
               <FontAwesomeIcon icon={faMessage} size="sm" />
@@ -220,7 +220,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
                   />
                 )
                 : (
-                  <div className="text-sm">
+                  <div className="text-sm truncate">
                     {c.title}
                   </div>
                 )
@@ -228,29 +228,48 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
 
             </div>
 
-            {
-              isActive && (
-                <div>
-                  {isEditing
-                    ? (
-                      <div className="flex items-center space-x-2">
-                        <FontAwesomeIcon icon={faCheck} size="sm" className="hover:text-pink-400" onClick={() => {
+            {isActive && (
+              <div>
+                {isEditing
+                  ? (
+                    // confirm or cancel edit
+                    <div className="flex items-center space-x-2">
+                      <FontAwesomeIcon
+                        icon={faCheck}
+                        size="sm"
+                        className="hover:text-pink-400"
+                        onClick={() => {
                           if (!newTitle) return;
                           void handleConfirmEdit(c.conversationId, newTitle, idx);
                         }}
-                        />
-                        <FontAwesomeIcon icon={faXmark} size="sm" className="hover:text-pink-400" onClick={handleCancelEdit} />
-                      </div>
-                    )
-                    : (
-                      <div className="flex items-center space-x-2">
-                        <FontAwesomeIcon icon={faPencil} size="sm" className="hover:text-pink-400" onClick={() => hancleClickEdit(c.conversationId)} />
-                        <FontAwesomeIcon icon={faTrashCan} size="sm" className="hover:text-pink-400" onClick={() => void handleClickDelete(c.conversationId, idx)} />
-                      </div>
-                    )}
-                </div>
-              )
-            }
+                      />
+                      <FontAwesomeIcon
+                        icon={faXmark}
+                        size="sm"
+                        className="hover:text-pink-400"
+                        onClick={handleCancelEdit}
+                      />
+                    </div>
+                  )
+                  : (
+                    // edit or delete
+                    <div className="flex items-center space-x-2">
+                      <FontAwesomeIcon
+                        icon={faPencil}
+                        size="sm"
+                        className="hover:text-pink-400"
+                        onClick={() => hancleClickEdit(c.conversationId)}
+                      />
+                      <FontAwesomeIcon
+                        icon={faTrashCan}
+                        size="sm"
+                        className="hover:text-pink-400"
+                        onClick={() => void handleClickDelete(c.conversationId, idx)}
+                      />
+                    </div>
+                  )}
+              </div>
+            )}
           </button>
         );
       })}
