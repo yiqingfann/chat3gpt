@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type Dispatch } from "react";
 import autosize from "autosize";
 import uuid from "react-uuid";
 
@@ -6,23 +6,29 @@ import type { NextPage } from "next";
 import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "react";
 import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
+import { faCheck, faPencil, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
+
+// ------------------types------------------
 
 type MessageInputProps = {
   setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
 };
 
 type Conversation = {
-  conversation: {
-    conversationId: string,
-    title: string,
-    createdAt: string,
-    userId: string,
-  },
-}
+  conversationId: string,
+  title: string,
+  createdAt: string,
+  userId: string,
+};
 
-// type PersistMessageResponse = {
-//   message: Message,
-// };
+type HistoryConversationsProps = {
+  conversationId: string,
+  setConversationId: Dispatch<SetStateAction<string>>,
+};
+
+// ------------------utils to interact with database------------------
 
 const persistMessagetoDb = async (message: Message) => {
   await fetch("/api/persist", {
@@ -31,6 +37,40 @@ const persistMessagetoDb = async (message: Message) => {
     body: JSON.stringify(message),
   });
 }
+
+const fetchAllConversations = async () => {
+  const rsp = await fetch("/api/conversations");
+  const data = await rsp.json() as { conversations: Conversation[] };
+  return data.conversations;
+}
+
+const createNewConversation = async () => {
+  const rsp = await fetch("/api/conversations", { method: "POST" });
+  const data = await rsp.json() as { conversation: Conversation };
+  return data.conversation;
+}
+
+const fetchAllMessages = async (conversationId: string) => {
+  const rsp = await fetch(`/api/messages?conversationId=${conversationId}`); // Q: better way to pass query params?
+  const data = await rsp.json() as { messages: Message[] };
+  return data.messages;
+}
+
+const updateConversationTitle = async (conversationId: string, newTitle: string) => {
+  await fetch(`/api/conversations?conversationId=${conversationId}`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ newTitle }),
+  });
+}
+
+const deleteConversation = async (conversationId: string) => {
+  await fetch(`/api/conversations?conversationId=${conversationId}`, {
+    method: "DELETE"
+  });
+}
+
+// ------------------components------------------
 
 const MessageInput = ({ setMessages }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
@@ -98,8 +138,131 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
   );
 }
 
+const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newTitle, setNewTitle] = useState<string | null>(null);
+
+  const handleClickNewConversation = async () => {
+    const newConversation = await createNewConversation();
+    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
+    setConversations(allConversations);
+    setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
+  }
+
+  const hancleClickEdit = (conversationId: string) => {
+    console.log("edit conversation", conversationId);
+    setIsEditing(true);
+  }
+
+  const handleConfirmEdit = async (conversationId: string, newTitle: string, idx: number) => {
+    await updateConversationTitle(conversationId, newTitle);
+    const _conversations = [...conversations];
+    _conversations[idx]!.title = newTitle;
+    setConversations(_conversations);
+    setIsEditing(false);
+    setNewTitle(null);
+  }
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setNewTitle(null);
+  }
+
+  const handleClickDelete = async (conversationId: string, idx: number) => {
+    await deleteConversation(conversationId);
+    const _conversations = [...conversations];
+    _conversations.splice(idx, 1);
+    setConversations(_conversations);
+    setConversationId("");
+  }
+
+  useEffect(() => {
+    const init = async () => {
+      const allConversations = await fetchAllConversations();
+      setConversations(allConversations);
+    }
+
+    void init();
+  }, []);
+
+  return (
+    <div className="w-64 bg-[#202123] p-2 space-y-2 overflow-auto">
+      <button
+        className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
+        onClick={() => void handleClickNewConversation()}
+      >
+        <FontAwesomeIcon icon={faPlus} size="sm" />
+        <div className="text-sm">New Conversation</div>
+      </button>
+
+      {conversations.map((c, idx) => {
+        const isActive = c.conversationId === conversationId;
+
+        return (
+          <button
+            key={c.conversationId}
+            className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
+          >
+            <div
+              className="flex items-center space-x-2"
+              onClick={() => setConversationId(c.conversationId)}
+            >
+              <FontAwesomeIcon icon={faMessage} size="sm" />
+
+              {isActive && isEditing
+                ? (
+                  <input
+                    className="bg-transparent text-sm"
+                    value={newTitle ?? c.title}
+                    onChange={(e) => setNewTitle(e.target.value)}
+                    autoFocus={true}
+                  />
+                )
+                : (
+                  <div className="text-sm">
+                    {c.title}
+                  </div>
+                )
+              }
+
+            </div>
+
+            {
+              isActive && (
+                <div>
+                  {isEditing
+                    ? (
+                      <div className="flex items-center space-x-2">
+                        <FontAwesomeIcon icon={faCheck} size="sm" className="hover:text-pink-400" onClick={() => {
+                          if (!newTitle) return;
+                          void handleConfirmEdit(c.conversationId, newTitle, idx);
+                        }}
+                        />
+                        <FontAwesomeIcon icon={faXmark} size="sm" className="hover:text-pink-400" onClick={handleCancelEdit} />
+                      </div>
+                    )
+                    : (
+                      <div className="flex items-center space-x-2">
+                        <FontAwesomeIcon icon={faPencil} size="sm" className="hover:text-pink-400" onClick={() => hancleClickEdit(c.conversationId)} />
+                        <FontAwesomeIcon icon={faTrashCan} size="sm" className="hover:text-pink-400" onClick={() => void handleClickDelete(c.conversationId, idx)} />
+                      </div>
+                    )}
+                </div>
+              )
+            }
+          </button>
+        );
+      })}
+
+    </div >
+  );
+}
+
+// ------------------main component------------------
+
 const Home: NextPage = () => {
-  const [conversationId, setConversationId] = useState("");
+  const [conversationId, setConversationId] = useState(""); // Q: empty string or null?
   const [messages, setMessages] = useState<ChatCompletionRequestMessage[]>([
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
@@ -107,11 +270,6 @@ const Home: NextPage = () => {
 
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
-
-  // create a new conversation when page loads
-  useEffect(() => {
-    void handleClickNewConversation();
-  }, []);
 
   // listen for user scroll
   useEffect(() => {
@@ -218,47 +376,52 @@ const Home: NextPage = () => {
     void persistAndFetch();
   }, [messages]);
 
-  const handleClickNewConversation = async () => {
-    const rsp = await fetch("/api/conversations", { method: "POST" });
-    const data = await rsp.json() as Conversation;
-    console.log(`---data = ${JSON.stringify(data, null, 2)}`);
-    const conversationId = data.conversation.conversationId;
-    setConversationId(conversationId);
-  }
+  // fetch and display all messages when conversationId changes
+  useEffect(() => {
+    if (!conversationId.length) return;
 
-  if (!conversationId.length) {
-    return (
-      <div className="h-screen w-screen flex justify-center items-center">
-        <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
-      </div>
-    );
-  }
+    const updateAllMessages = async () => {
+      const allMessages = await fetchAllMessages(conversationId);
+      setMessages(allMessages);
+    }
+
+    void updateAllMessages();
+  }, [conversationId]);
+
+  // if (!conversationId.length) {
+  //   return (
+  //     <div className="h-screen w-screen flex justify-center items-center">
+  //       <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+  //     </div>
+  //   );
+  // }
 
   return (
     <>
-      {/* <button
-        className="bg-pink-300 px-3 py-2 rounded-lg hover:cursor-pointer z-50 relative"
-        onClick={() => void handleClickNewConversation()}
-      >
-        + New Conversation
-      </button> */}
+      <div className="absolute left-0 right-0 top-0 bottom-0 flex">
+        {/* side bar */}
+        <HistoryConversations conversationId={conversationId} setConversationId={setConversationId} />
 
-      <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
-        {messages.map((m, i) => {
-          return (
-            <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-              <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
-                {m.content}
-              </div>
+        {/* conversation area */}
+        <div className="grow relative">
+          <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
+            {messages.map((m, i) => {
+              return (
+                <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
+                  <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
+                    {m.content}
+                  </div>
+                </div>
+              );
+            })}
+            <div className="h-32" />
+          </div>
+
+          <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
+            <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
+              <MessageInput setMessages={setMessages} />
             </div>
-          );
-        })}
-        <div className="h-32" />
-      </div>
-
-      <div className="absolute left-0 right-0 bottom-0 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
-        <div className="container mx-auto p-3 rounded-md bg-[#40414F]">
-          <MessageInput setMessages={setMessages} />
+          </div>
         </div>
       </div>
     </>
