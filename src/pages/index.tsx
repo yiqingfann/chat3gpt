@@ -397,7 +397,10 @@ const Home: NextPage = () => {
 
   // fetch and display all messages when conversationId changes
   useEffect(() => {
-    if (!conversationId.length) return;
+    if (!conversationId.length) {
+      setMessages([]);
+      return;
+    }
 
     const updateAllMessages = async () => {
       const allMessages = await fetchAllMessages(conversationId);
