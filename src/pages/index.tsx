@@ -203,11 +203,9 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
           <button
             key={c.conversationId}
             className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
+            onClick={() => setConversationId(c.conversationId)}
           >
-            <div
-              className="flex items-center space-x-2 min-w-0"
-              onClick={() => setConversationId(c.conversationId)}
-            >
+            <div className="flex items-center space-x-2 min-w-0">
               <FontAwesomeIcon icon={faMessage} size="sm" />
 
               {isActive && isEditing
@@ -409,14 +407,6 @@ const Home: NextPage = () => {
 
     void updateAllMessages();
   }, [conversationId]);
-
-  // if (!conversationId.length) {
-  //   return (
-  //     <div className="h-screen w-screen flex justify-center items-center">
-  //       <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
-  //     </div>
-  //   );
-  // }
 
   return (
     <>
