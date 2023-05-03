@@ -27,14 +27,16 @@ model Message {
   conversationId String
   messageNum     Int
   role           Role
-  content        String @db.LongText
+  content        String       @db.LongText
+  conversation   Conversation @relation(fields: [conversationId], references: [conversationId], onDelete: Cascade)
 
   @@id([conversationId, messageNum])
 }
 
 model Conversation {
-  conversationId String   @id @default(uuid())
-  title          String   @default("New Conversation")
-  createdAt      DateTime @default(now())
+  conversationId String    @id @default(uuid())
+  title          String    @default("New Conversation")
+  createdAt      DateTime  @default(now())
   userId         String
+  messages       Message[]
 }
