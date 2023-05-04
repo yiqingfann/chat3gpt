@@ -8,7 +8,7 @@ import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
-import { faCheck, faPencil, faPlus, faTrash, faXmark } from "@fortawesome/free-solid-svg-icons";
+import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars } from "@fortawesome/free-solid-svg-icons";
 
 // ------------------types------------------
 
@@ -187,7 +187,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   }, []);
 
   return (
-    <div className="w-64 bg-[#202123] p-2 space-y-2 overflow-auto">
+    <div className="p-2 space-y-2 overflow-auto">
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
         onClick={() => void handleClickNewConversation()}
@@ -271,8 +271,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
           </button>
         );
       })}
-
-    </div >
+    </div>
   );
 }
 
@@ -408,14 +407,41 @@ const Home: NextPage = () => {
     void updateAllMessages();
   }, [conversationId]);
 
+  const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
+
   return (
     <>
-      <div className="absolute left-0 right-0 top-0 bottom-0 flex">
+      <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col sm:flex-row">
+        {/* top menu bar on mobile */}
+        <div className="bg-[#444654] px-3 py-2 flex justify-between sm:hidden">
+          <button onClick={() => setShowSidebarOnMobile(true)}>
+            <FontAwesomeIcon icon={faBars} size="xl" color="white" />
+          </button>
+        </div>
+
+        {/* close side bar on mobile */}
+        {showSidebarOnMobile && (
+          <button className="absolute top-3 right-3 z-10 sm:hidden" onClick={() => setShowSidebarOnMobile(false)}>
+            <FontAwesomeIcon icon={faCircleXmark} size="2xl" color="white" />
+          </button>
+        )}
+
         {/* side bar */}
-        <HistoryConversations
-          conversationId={conversationId}
-          setConversationId={setConversationId}
-        />
+        <div
+          className={`
+            absolute sm:relative top-0 bottom-0 left-0 z-10 w-64
+            transform ${showSidebarOnMobile ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out
+            sm:translate-x-0
+            `
+          }
+        >
+          <div className="w-full h-full bg-[#202123]">
+            <HistoryConversations
+              conversationId={conversationId}
+              setConversationId={setConversationId}
+            />
+          </div>
+        </div>
 
         {/* conversation area */}
         <div className="grow relative">
@@ -423,7 +449,7 @@ const Home: NextPage = () => {
             {messages.map((m, i) => {
               return (
                 <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-                  <div className="container mx-auto px-5 sm:px-48 py-5 text-white whitespace-pre-wrap">
+                  <div className="container mx-auto px-5 lg:px-48 py-5 text-white whitespace-pre-wrap">
                     {m.content}
                   </div>
                 </div>
