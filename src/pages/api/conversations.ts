@@ -2,17 +2,9 @@ import { getAuth } from "@clerk/nextjs/server";
 import { PrismaClient } from "@prisma/client";
 
 import type { NextApiRequest, NextApiResponse } from "next";
+import { isAuthorized } from "~/utils/utils";
 
 const prisma = new PrismaClient();
-
-const isAuthorized = async (userId: string, conversationId: string) => {
-  const conversation = await prisma.conversation.findUnique({
-    where: { conversationId: conversationId },
-  });
-  if (!conversation) return false;
-  if (conversation.userId !== userId) return false; // Q: different http status code and error message?
-  return true;
-}
 
 const handler = async (req: NextApiRequest, rsp: NextApiResponse) => {
   const { userId } = getAuth(req);

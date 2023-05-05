@@ -31,7 +31,7 @@ type HistoryConversationsProps = {
 // ------------------utils to interact with database------------------
 
 const persistMessagetoDb = async (message: Message) => {
-  await fetch("/api/persist", {
+  await fetch("/api/messages", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(message),
