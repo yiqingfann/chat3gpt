@@ -243,8 +243,9 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
   );
 }
 
-const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
+const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
@@ -254,8 +255,10 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   }
 
   const refreshConversations = async () => {
+    setLoading(true);
     const allConversations = await fetchAllConversations();
     setConversations(allConversations);
+    setLoading(false); // Q: is this the best place to set loading to false? or should I set it in the useEffect?
   }
 
   useEffect(() => {
@@ -264,6 +267,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
 
   return (
     <div className="p-2 space-y-2">
+      {/* new conversation button */}
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
         onClick={() => void handleClickNewConversation()}
@@ -272,7 +276,15 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
         <div className="text-sm">New Conversation</div>
       </button>
 
-      {conversations.map((c) => {
+      {/* loading indicator */}
+      {loading && (
+        <div className="py-2 flex justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {/* conversation items */}
+      {!loading && conversations.map((c) => {
         const isActive = c.conversationId === conversationId;
         return (
           <Fragment key={c.conversationId}>
@@ -289,6 +301,12 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   );
 }
 
+const LoadingSpinner = () => {
+  return (
+    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+  );
+}
+
 // ------------------main component------------------
 
 const Home: NextPage = () => {
@@ -297,9 +315,17 @@ const Home: NextPage = () => {
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
-
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const scrollToBottomIfAtBottom = () => {
+    if (shouldScrollToBottom && conversationAreaRef.current) {
+      const conversationAreaDiv = conversationAreaRef.current;
+      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+    }
+  }
 
   // listen for user scroll
   useEffect(() => {
@@ -315,29 +341,11 @@ const Home: NextPage = () => {
     return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
   }, []);
 
-  // auto scroll to bottom when new messages are added
-  useEffect(() => {
-    // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
-    if (!shouldScrollToBottom) return;
-    if (!conversationAreaRef.current) return;
-
-    const conversationAreaDiv = conversationAreaRef.current;
-    conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-  }, [conversationAreaRef.current?.scrollHeight]);
-
   // fetch assistant message when user message is added
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
     if (latestMessage.role === "assistant") return;
-
-    // I think this is redundant, 
-    // but somehow useEffect for scrollHeight is not always fired after a user message is added to messages,
-    // so also scroll to bottom if nessessary here
-    if (shouldScrollToBottom && conversationAreaRef.current) {
-      const conversationAreaDiv = conversationAreaRef.current;
-      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-    }
 
     // fetch assistant message stream
     const fetchAssistantMessageStream = async () => {
@@ -408,6 +416,7 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     setShowSidebarOnMobile(false);
+    scrollToBottomIfAtBottom();
   }, [messages]);
 
   // fetch and display all messages when conversationId changes
@@ -418,50 +427,57 @@ const Home: NextPage = () => {
     }
 
     const updateAllMessages = async () => {
+      setLoading(true);
       const allMessages = await fetchAllMessages(conversationId);
       setMessages(allMessages);
+      setLoading(false);
     }
 
     void updateAllMessages();
   }, [conversationId]);
 
-  const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
-
   return (
-    <>
-      <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col sm:flex-row">
-        {/* top menu bar on mobile */}
-        <div className="bg-[#444654] px-3 py-2 flex justify-between sm:hidden">
-          <button onClick={() => setShowSidebarOnMobile(true)}>
-            <FontAwesomeIcon icon={faBars} size="xl" color="white" />
-          </button>
-        </div>
+    <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col sm:flex-row">
+      {/* top menu bar on mobile */}
+      <div className="bg-[#444654] px-3 py-2 flex justify-between sm:hidden">
+        <button onClick={() => setShowSidebarOnMobile(true)}>
+          <FontAwesomeIcon icon={faBars} size="xl" color="white" />
+        </button>
+      </div>
 
-        {/* close side bar on mobile */}
-        {showSidebarOnMobile && (
-          <button className="absolute top-3 right-3 z-10 sm:hidden" onClick={() => setShowSidebarOnMobile(false)}>
-            <FontAwesomeIcon icon={faCircleXmark} size="2xl" color="white" />
-          </button>
-        )}
+      {/* close side bar on mobile */}
+      {showSidebarOnMobile && (
+        <button className="absolute top-3 right-3 z-10 sm:hidden" onClick={() => setShowSidebarOnMobile(false)}>
+          <FontAwesomeIcon icon={faCircleXmark} size="2xl" color="white" />
+        </button>
+      )}
 
-        {/* side bar */}
-        <div
-          className={`
+      {/* side bar */}
+      <div
+        className={`
             absolute sm:relative top-0 bottom-0 left-0 z-10 w-64
             transform ${showSidebarOnMobile ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out
             sm:translate-x-0
             `
-          }
-        >
-          <div className="w-full h-full bg-[#202123] overflow-auto">
-            <HistoryConversations
-              conversationId={conversationId}
-              setConversationId={setConversationId}
-            />
+        }
+      >
+        <div className="w-full h-full bg-[#202123] overflow-auto">
+          <ConversationsSidebar
+            conversationId={conversationId}
+            setConversationId={setConversationId}
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grow relative">
+          <div className="absolute left-0 right-0 top-0 bottom-0">
+            <div className="h-full w-full flex justify-center items-center">
+              <LoadingSpinner />
+            </div>
           </div>
         </div>
-
-        {/* conversation area */}
+      ) : (
         <div className="grow relative">
           <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
             {messages.map((m, i) => {
@@ -483,10 +499,9 @@ const Home: NextPage = () => {
               </div>
             </div>
           )}
-
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 };
 
