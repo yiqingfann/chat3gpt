@@ -12,20 +12,11 @@ import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars
 
 // ------------------types------------------
 
-type MessageInputProps = {
-  setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
-};
-
 type Conversation = {
   conversationId: string,
   title: string,
   createdAt: string,
   userId: string,
-};
-
-type HistoryConversationsProps = {
-  conversationId: string,
-  setConversationId: Dispatch<SetStateAction<string>>,
 };
 
 // ------------------utils to interact with database------------------
@@ -72,7 +63,12 @@ const deleteConversation = async (conversationId: string) => {
 
 // ------------------components------------------
 
-const MessageInput = ({ setMessages }: MessageInputProps) => {
+type MessageInputProps = {
+  setMessages: React.Dispatch<SetStateAction<ChatCompletionRequestMessage[]>>;
+  disabled: boolean;
+};
+
+const MessageInput = ({ setMessages, disabled }: MessageInputProps) => {
   const [curUserMessage, setCurUserMessage] = useState("");
   const textAreaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -132,8 +128,9 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
         value={curUserMessage}
         onChange={handleInputChange}
         onKeyDown={handleKeyDown}
+        disabled={disabled}
       />
-      <button className="px-2 text-white">Send</button>
+      <button className="px-2 text-white" disabled={disabled}>Send</button>
     </form>
   );
 }
@@ -143,9 +140,10 @@ type ConversationItemProps = {
   isActive: boolean,
   setActiveConversationId: Dispatch<SetStateAction<string>>,
   refreshConversations: () => Promise<void>,
+  disabled: boolean,
 };
 
-const ConversationItem = ({ conversationData, isActive, setActiveConversationId, refreshConversations }: ConversationItemProps) => {
+const ConversationItem = ({ conversationData, isActive, setActiveConversationId, refreshConversations, disabled }: ConversationItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState<string | null>(null);
 
@@ -178,6 +176,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
     <button
       className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
       onClick={() => setActiveConversationId(conversationId)}
+      disabled={disabled}
     >
       {/* message icon and title */}
       <div className="flex items-center space-x-2 min-w-0">
@@ -191,6 +190,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
               onChange={(e) => setNewTitle(e.target.value)}
               autoFocus={true}
               onBlur={() => void handleConfirmEdit()}
+              disabled={disabled}
             />
           )
           : (
@@ -207,35 +207,23 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
           ? (
             // confirm or cancel edit
             <div className="flex items-center space-x-2" onMouseDown={(e) => e.preventDefault()}>
-              <FontAwesomeIcon
-                icon={faCheck}
-                size="sm"
-                className="hover:text-pink-400"
-                onClick={() => void handleConfirmEdit()}
-              />
-              <FontAwesomeIcon
-                icon={faXmark}
-                size="sm"
-                className="hover:text-pink-400"
-                onClick={handleCancelEdit}
-              />
+              <button onClick={() => void handleConfirmEdit()} disabled={disabled}>
+                <FontAwesomeIcon icon={faCheck} size="sm" className="hover:text-pink-400" />
+              </button>
+              <button onClick={handleCancelEdit} disabled={disabled}>
+                <FontAwesomeIcon icon={faXmark} size="sm" className="hover:text-pink-400" />
+              </button>
             </div>
           )
           : (
             // edit or delete
             <div className="flex items-center space-x-2">
-              <FontAwesomeIcon
-                icon={faPencil}
-                size="sm"
-                className="hover:text-pink-400"
-                onClick={hancleClickEdit}
-              />
-              <FontAwesomeIcon
-                icon={faTrashCan}
-                size="sm"
-                className="hover:text-pink-400"
-                onClick={() => void handleClickDelete()}
-              />
+              <button onClick={hancleClickEdit} disabled={disabled}>
+                <FontAwesomeIcon icon={faPencil} size="sm" className="hover:text-pink-400" />
+              </button>
+              <button onClick={() => void handleClickDelete()} disabled={disabled}>
+                <FontAwesomeIcon icon={faTrashCan} size="sm" className="hover:text-pink-400" />
+              </button>
             </div>
           )}
       </div>
@@ -243,7 +231,13 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
   );
 }
 
-const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
+type ConversationsSidebarProps = {
+  conversationId: string,
+  setConversationId: Dispatch<SetStateAction<string>>,
+  disabled: boolean,
+};
+
+const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: ConversationsSidebarProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -271,6 +265,7 @@ const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConv
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
         onClick={() => void handleClickNewConversation()}
+        disabled={disabled}
       >
         <FontAwesomeIcon icon={faPlus} size="sm" />
         <div className="text-sm">New Conversation</div>
@@ -293,6 +288,7 @@ const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConv
               isActive={isActive}
               setActiveConversationId={setConversationId}
               refreshConversations={refreshConversations}
+              disabled={disabled}
             />
           </Fragment>
         );
@@ -368,6 +364,7 @@ const Home: NextPage = () => {
   ]);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [streaming, setStreaming] = useState(false);
 
   // fetch assistant message when user message is added
   useEffect(() => {
@@ -392,6 +389,7 @@ const Home: NextPage = () => {
       let done = false;
       let curAssistantMessage = "";
 
+      setStreaming(true);
       while (!done) {
         const { value, done: doneReading } = await reader.read();
         done = doneReading;
@@ -411,6 +409,7 @@ const Home: NextPage = () => {
           return newMessages;
         });
       }
+      setStreaming(false);
 
       return curAssistantMessage;
     }
@@ -492,6 +491,7 @@ const Home: NextPage = () => {
           <ConversationsSidebar
             conversationId={conversationId}
             setConversationId={setConversationId}
+            disabled={streaming}
           />
         </div>
       </div>
@@ -505,7 +505,7 @@ const Home: NextPage = () => {
         {!!conversationId.length && !loading && (
           <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
             <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
-              <MessageInput setMessages={setMessages} />
+              <MessageInput setMessages={setMessages} disabled={streaming} />
             </div>
           </div>
         )}
