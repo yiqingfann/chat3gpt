@@ -502,7 +502,7 @@ const Home: NextPage = () => {
           {loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />}
         </div>
 
-        {!!conversationId.length && (
+        {!!conversationId.length && !loading && (
           <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
             <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
               <MessageInput setMessages={setMessages} />
