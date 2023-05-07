@@ -406,6 +406,10 @@ const Home: NextPage = () => {
     void persistAndFetch();
   }, [messages]);
 
+  useEffect(() => {
+    setShowSidebarOnMobile(false);
+  }, [messages]);
+
   // fetch and display all messages when conversationId changes
   useEffect(() => {
     if (!conversationId.length) {
