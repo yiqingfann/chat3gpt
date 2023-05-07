@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type Dispatch } from "react";
+import { useState, useEffect, useRef, type Dispatch, Fragment } from "react";
 import autosize from "autosize";
 import uuid from "react-uuid";
 
@@ -138,28 +138,27 @@ const MessageInput = ({ setMessages }: MessageInputProps) => {
   );
 }
 
-const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+type ConversationItemProps = {
+  conversationData: Conversation,
+  isActive: boolean,
+  setActiveConversationId: Dispatch<SetStateAction<string>>,
+  refreshConversations: () => Promise<void>,
+};
+
+const ConversationItem = ({ conversationData, isActive, setActiveConversationId, refreshConversations }: ConversationItemProps) => {
   const [isEditing, setIsEditing] = useState(false);
   const [newTitle, setNewTitle] = useState<string | null>(null);
 
-  const handleClickNewConversation = async () => {
-    const newConversation = await createNewConversation();
-    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
-    setConversations(allConversations);
-    setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
-  }
+  const { conversationId, title } = conversationData;
 
-  const hancleClickEdit = (conversationId: string) => {
-    console.log("edit conversation", conversationId);
+  const hancleClickEdit = () => {
     setIsEditing(true);
   }
 
-  const handleConfirmEdit = async (conversationId: string, newTitle: string, idx: number) => {
+  const handleConfirmEdit = async () => {
+    if (!newTitle) return;
     await updateConversationTitle(conversationId, newTitle);
-    const _conversations = [...conversations];
-    _conversations[idx]!.title = newTitle;
-    setConversations(_conversations);
+    await refreshConversations(); // IMPROBE: avoid querying db again using the return value from update?
     setIsEditing(false);
     setNewTitle(null);
   }
@@ -169,21 +168,98 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
     setNewTitle(null);
   }
 
-  const handleClickDelete = async (conversationId: string, idx: number) => {
+  const handleClickDelete = async () => {
     await deleteConversation(conversationId);
-    const _conversations = [...conversations];
-    _conversations.splice(idx, 1);
-    setConversations(_conversations);
-    setConversationId("");
+    await refreshConversations();
+    setActiveConversationId("");
+  }
+
+  return (
+    <button
+      className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
+      onClick={() => setActiveConversationId(conversationId)}
+    >
+      {/* message icon and title */}
+      <div className="flex items-center space-x-2 min-w-0">
+        <FontAwesomeIcon icon={faMessage} size="sm" />
+
+        {isEditing
+          ? (
+            <input
+              className="bg-transparent text-sm"
+              value={newTitle ?? title}
+              onChange={(e) => setNewTitle(e.target.value)}
+              autoFocus={true}
+              onBlur={() => void handleConfirmEdit()}
+            />
+          )
+          : (
+            <div className="text-sm truncate">
+              {title}
+            </div>
+          )
+        }
+      </div>
+
+      {/* edit and delete button */}
+      <div>
+        {isEditing
+          ? (
+            // confirm or cancel edit
+            <div className="flex items-center space-x-2" onMouseDown={(e) => e.preventDefault()}>
+              <FontAwesomeIcon
+                icon={faCheck}
+                size="sm"
+                className="hover:text-pink-400"
+                onClick={() => void handleConfirmEdit()}
+              />
+              <FontAwesomeIcon
+                icon={faXmark}
+                size="sm"
+                className="hover:text-pink-400"
+                onClick={handleCancelEdit}
+              />
+            </div>
+          )
+          : (
+            // edit or delete
+            <div className="flex items-center space-x-2">
+              <FontAwesomeIcon
+                icon={faPencil}
+                size="sm"
+                className="hover:text-pink-400"
+                onClick={hancleClickEdit}
+              />
+              <FontAwesomeIcon
+                icon={faTrashCan}
+                size="sm"
+                className="hover:text-pink-400"
+                onClick={() => void handleClickDelete()}
+              />
+            </div>
+          )}
+      </div>
+    </button>
+  );
+}
+
+const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+
+  const handleClickNewConversation = async () => {
+    const newConversation = await createNewConversation();
+    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
+    setConversations(allConversations);
+    setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
+  }
+
+  const refreshConversations = async () => {
+    const allConversations = await fetchAllConversations();
+    setConversations(allConversations);
   }
 
   useEffect(() => {
-    const init = async () => {
-      const allConversations = await fetchAllConversations();
-      setConversations(allConversations);
-    }
-
-    void init();
+    void refreshConversations();
   }, []);
 
   return (
@@ -196,79 +272,17 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
         <div className="text-sm">New Conversation</div>
       </button>
 
-      {conversations.map((c, idx) => {
+      {conversations.map((c) => {
         const isActive = c.conversationId === conversationId;
-
         return (
-          <button
-            key={c.conversationId}
-            className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
-            onClick={() => setConversationId(c.conversationId)}
-          >
-            <div className="flex items-center space-x-2 min-w-0">
-              <FontAwesomeIcon icon={faMessage} size="sm" />
-
-              {isActive && isEditing
-                ? (
-                  <input
-                    className="bg-transparent text-sm"
-                    value={newTitle ?? c.title}
-                    onChange={(e) => setNewTitle(e.target.value)}
-                    autoFocus={true}
-                  />
-                )
-                : (
-                  <div className="text-sm truncate">
-                    {c.title}
-                  </div>
-                )
-              }
-
-            </div>
-
-            {isActive && (
-              <div>
-                {isEditing
-                  ? (
-                    // confirm or cancel edit
-                    <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon
-                        icon={faCheck}
-                        size="sm"
-                        className="hover:text-pink-400"
-                        onClick={() => {
-                          if (!newTitle) return;
-                          void handleConfirmEdit(c.conversationId, newTitle, idx);
-                        }}
-                      />
-                      <FontAwesomeIcon
-                        icon={faXmark}
-                        size="sm"
-                        className="hover:text-pink-400"
-                        onClick={handleCancelEdit}
-                      />
-                    </div>
-                  )
-                  : (
-                    // edit or delete
-                    <div className="flex items-center space-x-2">
-                      <FontAwesomeIcon
-                        icon={faPencil}
-                        size="sm"
-                        className="hover:text-pink-400"
-                        onClick={() => hancleClickEdit(c.conversationId)}
-                      />
-                      <FontAwesomeIcon
-                        icon={faTrashCan}
-                        size="sm"
-                        className="hover:text-pink-400"
-                        onClick={() => void handleClickDelete(c.conversationId, idx)}
-                      />
-                    </div>
-                  )}
-              </div>
-            )}
-          </button>
+          <Fragment key={c.conversationId}>
+            <ConversationItem
+              conversationData={c}
+              isActive={isActive}
+              setActiveConversationId={setConversationId}
+              refreshConversations={refreshConversations}
+            />
+          </Fragment>
         );
       })}
     </div>
