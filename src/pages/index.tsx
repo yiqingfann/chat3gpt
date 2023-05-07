@@ -303,7 +303,58 @@ const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConv
 
 const LoadingSpinner = () => {
   return (
-    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+    <div className="h-full w-full flex justify-center items-center">
+      <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+    </div>
+  );
+}
+
+type MessagesAreaProps = {
+  messages: ChatCompletionRequestMessage[];
+}
+
+const MessagesArea = ({ messages }: MessagesAreaProps) => {
+  const conversationAreaRef = useRef<HTMLDivElement>(null);
+  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+
+  const scrollToBottom = () => {
+    if (!conversationAreaRef.current) return;
+    const conversationAreaDiv = conversationAreaRef.current;
+    conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+  }
+
+  // scroll to bottom and listen for user scroll
+  useEffect(() => {
+    // whenever the conversation area is scrolled, decide if should scroll to bottom later
+    const onScroll = () => {
+      if (!conversationAreaRef.current) return;
+      const { scrollTop, clientHeight, scrollHeight } = conversationAreaRef.current;
+      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10 for some accuracy tolerance
+      setShouldScrollToBottom(isAtBottom);
+    }
+
+    scrollToBottom();
+    conversationAreaRef.current?.addEventListener("scroll", onScroll);
+    return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (shouldScrollToBottom) scrollToBottom();
+  }, [messages]);
+
+  return (
+    <div className="h-full w-full overflow-auto" ref={conversationAreaRef}>
+      {messages.map((m, i) => {
+        return (
+          <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
+            <div className="container mx-auto px-5 lg:px-48 py-5 text-white whitespace-pre-wrap">
+              {m.content}
+            </div>
+          </div>
+        );
+      })}
+      <div className="h-32" />
+    </div>
   );
 }
 
@@ -315,31 +366,8 @@ const Home: NextPage = () => {
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
-  const conversationAreaRef = useRef<HTMLDivElement>(null);
-  const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const scrollToBottomIfAtBottom = () => {
-    if (shouldScrollToBottom && conversationAreaRef.current) {
-      const conversationAreaDiv = conversationAreaRef.current;
-      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-    }
-  }
-
-  // listen for user scroll
-  useEffect(() => {
-    // whenever the conversation area is scrolled, decide if should scroll to bottom later
-    const onScroll = () => {
-      if (!conversationAreaRef.current) return;
-      const { scrollTop, clientHeight, scrollHeight } = conversationAreaRef.current;
-      const isAtBottom = scrollTop + clientHeight >= scrollHeight - 10; // 10 for some accuracy tolerance
-      setShouldScrollToBottom(isAtBottom);
-    }
-
-    conversationAreaRef.current?.addEventListener("scroll", onScroll);
-    return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
-  }, []);
 
   // fetch assistant message when user message is added
   useEffect(() => {
@@ -416,7 +444,6 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     setShowSidebarOnMobile(false);
-    scrollToBottomIfAtBottom();
   }, [messages]);
 
   // fetch and display all messages when conversationId changes
@@ -469,38 +496,20 @@ const Home: NextPage = () => {
         </div>
       </div>
 
-      {loading ? (
-        <div className="grow relative">
-          <div className="absolute left-0 right-0 top-0 bottom-0">
-            <div className="h-full w-full flex justify-center items-center">
-              <LoadingSpinner />
-            </div>
-          </div>
+      {/* messages area and input */}
+      <div className="grow relative">
+        <div className="absolute left-0 right-0 top-0 bottom-0">
+          {loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />}
         </div>
-      ) : (
-        <div className="grow relative">
-          <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
-            {messages.map((m, i) => {
-              return (
-                <div key={i} className={m.role === "user" ? "bg-[#343541]" : "bg-[#444654]"}>
-                  <div className="container mx-auto px-5 lg:px-48 py-5 text-white whitespace-pre-wrap">
-                    {m.content}
-                  </div>
-                </div>
-              );
-            })}
-            <div className="h-32" />
-          </div>
 
-          {!!conversationId.length && (
-            <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
-              <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
-                <MessageInput setMessages={setMessages} />
-              </div>
+        {!!conversationId.length && (
+          <div className="absolute left-0 right-0 bottom-0 sm:px-10 sm:py-10 bg-gradient-to-t from-[#343541] from-50% to-transparent">
+            <div className="max-w-4xl mx-auto p-3 rounded-md bg-[#40414F]">
+              <MessageInput setMessages={setMessages} />
             </div>
-          )}
-        </div>
-      )}
+          </div>
+        )}
+      </div>
     </div>
   );
 };
