@@ -263,7 +263,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   }, []);
 
   return (
-    <div className="p-2 space-y-2 overflow-auto">
+    <div className="p-2 space-y-2">
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
         onClick={() => void handleClickNewConversation()}
@@ -453,7 +453,7 @@ const Home: NextPage = () => {
             `
           }
         >
-          <div className="w-full h-full bg-[#202123]">
+          <div className="w-full h-full bg-[#202123] overflow-auto">
             <HistoryConversations
               conversationId={conversationId}
               setConversationId={setConversationId}
