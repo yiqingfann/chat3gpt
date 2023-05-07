@@ -243,8 +243,9 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
   );
 }
 
-const HistoryConversations = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
+const ConversationsSidebar = ({ conversationId, setConversationId }: HistoryConversationsProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(false);
 
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
@@ -254,8 +255,10 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   }
 
   const refreshConversations = async () => {
+    setLoading(true);
     const allConversations = await fetchAllConversations();
     setConversations(allConversations);
+    setLoading(false); // Q: is this the best place to set loading to false? or should I set it in the useEffect?
   }
 
   useEffect(() => {
@@ -264,6 +267,7 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
 
   return (
     <div className="p-2 space-y-2">
+      {/* new conversation button */}
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
         onClick={() => void handleClickNewConversation()}
@@ -272,7 +276,15 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
         <div className="text-sm">New Conversation</div>
       </button>
 
-      {conversations.map((c) => {
+      {/* loading indicator */}
+      {loading && (
+        <div className="py-2 flex justify-center">
+          <LoadingSpinner />
+        </div>
+      )}
+
+      {/* conversation items */}
+      {!loading && conversations.map((c) => {
         const isActive = c.conversationId === conversationId;
         return (
           <Fragment key={c.conversationId}>
@@ -289,6 +301,12 @@ const HistoryConversations = ({ conversationId, setConversationId }: HistoryConv
   );
 }
 
+const LoadingSpinner = () => {
+  return (
+    <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-current border-r-transparent align-[-0.125em] motion-reduce:animate-[spin_1.5s_linear_infinite] text-white" />
+  );
+}
+
 // ------------------main component------------------
 
 const Home: NextPage = () => {
@@ -297,9 +315,9 @@ const Home: NextPage = () => {
     // { role: "user", content: "Hello, I'm Frank" },
     // { role: "assistant", content: "Hi, I'm ChatGPT" },
   ]);
-
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
+  const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
 
   // listen for user scroll
   useEffect(() => {
@@ -425,7 +443,6 @@ const Home: NextPage = () => {
     void updateAllMessages();
   }, [conversationId]);
 
-  const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
 
   return (
     <>
@@ -454,7 +471,7 @@ const Home: NextPage = () => {
           }
         >
           <div className="w-full h-full bg-[#202123] overflow-auto">
-            <HistoryConversations
+            <ConversationsSidebar
               conversationId={conversationId}
               setConversationId={setConversationId}
             />
