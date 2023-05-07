@@ -320,6 +320,13 @@ const Home: NextPage = () => {
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  const scrollToBottomIfAtBottom = () => {
+    if (shouldScrollToBottom && conversationAreaRef.current) {
+      const conversationAreaDiv = conversationAreaRef.current;
+      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
+    }
+  }
+
   // listen for user scroll
   useEffect(() => {
     // whenever the conversation area is scrolled, decide if should scroll to bottom later
@@ -334,29 +341,11 @@ const Home: NextPage = () => {
     return () => conversationAreaRef.current?.removeEventListener("scroll", onScroll);
   }, []);
 
-  // auto scroll to bottom when new messages are added
-  useEffect(() => {
-    // whenever the conversation area changes in scrollHeight, scroll to bottom if nessessary
-    if (!shouldScrollToBottom) return;
-    if (!conversationAreaRef.current) return;
-
-    const conversationAreaDiv = conversationAreaRef.current;
-    conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-  }, [conversationAreaRef.current?.scrollHeight]);
-
   // fetch assistant message when user message is added
   useEffect(() => {
     const latestMessage = messages[messages.length - 1];
     if (!latestMessage) return;
     if (latestMessage.role === "assistant") return;
-
-    // I think this is redundant, 
-    // but somehow useEffect for scrollHeight is not always fired after a user message is added to messages,
-    // so also scroll to bottom if nessessary here
-    if (shouldScrollToBottom && conversationAreaRef.current) {
-      const conversationAreaDiv = conversationAreaRef.current;
-      conversationAreaDiv.scrollTop = conversationAreaDiv.scrollHeight - conversationAreaDiv.clientHeight;
-    }
 
     // fetch assistant message stream
     const fetchAssistantMessageStream = async () => {
@@ -427,6 +416,7 @@ const Home: NextPage = () => {
 
   useEffect(() => {
     setShowSidebarOnMobile(false);
+    scrollToBottomIfAtBottom();
   }, [messages]);
 
   // fetch and display all messages when conversationId changes
