@@ -318,6 +318,7 @@ const Home: NextPage = () => {
   const conversationAreaRef = useRef<HTMLDivElement>(null);
   const [shouldScrollToBottom, setShouldScrollToBottom] = useState(true);
   const [showSidebarOnMobile, setShowSidebarOnMobile] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   // listen for user scroll
   useEffect(() => {
@@ -436,49 +437,57 @@ const Home: NextPage = () => {
     }
 
     const updateAllMessages = async () => {
+      setLoading(true);
       const allMessages = await fetchAllMessages(conversationId);
       setMessages(allMessages);
+      setLoading(false);
     }
 
     void updateAllMessages();
   }, [conversationId]);
 
-
   return (
-    <>
-      <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col sm:flex-row">
-        {/* top menu bar on mobile */}
-        <div className="bg-[#444654] px-3 py-2 flex justify-between sm:hidden">
-          <button onClick={() => setShowSidebarOnMobile(true)}>
-            <FontAwesomeIcon icon={faBars} size="xl" color="white" />
-          </button>
-        </div>
+    <div className="absolute left-0 right-0 top-0 bottom-0 flex flex-col sm:flex-row">
+      {/* top menu bar on mobile */}
+      <div className="bg-[#444654] px-3 py-2 flex justify-between sm:hidden">
+        <button onClick={() => setShowSidebarOnMobile(true)}>
+          <FontAwesomeIcon icon={faBars} size="xl" color="white" />
+        </button>
+      </div>
 
-        {/* close side bar on mobile */}
-        {showSidebarOnMobile && (
-          <button className="absolute top-3 right-3 z-10 sm:hidden" onClick={() => setShowSidebarOnMobile(false)}>
-            <FontAwesomeIcon icon={faCircleXmark} size="2xl" color="white" />
-          </button>
-        )}
+      {/* close side bar on mobile */}
+      {showSidebarOnMobile && (
+        <button className="absolute top-3 right-3 z-10 sm:hidden" onClick={() => setShowSidebarOnMobile(false)}>
+          <FontAwesomeIcon icon={faCircleXmark} size="2xl" color="white" />
+        </button>
+      )}
 
-        {/* side bar */}
-        <div
-          className={`
+      {/* side bar */}
+      <div
+        className={`
             absolute sm:relative top-0 bottom-0 left-0 z-10 w-64
             transform ${showSidebarOnMobile ? "translate-x-0" : "-translate-x-full"} transition-transform duration-300 ease-in-out
             sm:translate-x-0
             `
-          }
-        >
-          <div className="w-full h-full bg-[#202123] overflow-auto">
-            <ConversationsSidebar
-              conversationId={conversationId}
-              setConversationId={setConversationId}
-            />
+        }
+      >
+        <div className="w-full h-full bg-[#202123] overflow-auto">
+          <ConversationsSidebar
+            conversationId={conversationId}
+            setConversationId={setConversationId}
+          />
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="grow relative">
+          <div className="absolute left-0 right-0 top-0 bottom-0">
+            <div className="h-full w-full flex justify-center items-center">
+              <LoadingSpinner />
+            </div>
           </div>
         </div>
-
-        {/* conversation area */}
+      ) : (
         <div className="grow relative">
           <div className="absolute left-0 right-0 top-0 bottom-0 overflow-auto" ref={conversationAreaRef}>
             {messages.map((m, i) => {
@@ -500,10 +509,9 @@ const Home: NextPage = () => {
               </div>
             </div>
           )}
-
         </div>
-      </div>
-    </>
+      )}
+    </div>
   );
 };
 
