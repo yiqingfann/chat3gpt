@@ -158,9 +158,9 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
   const handleConfirmEdit = async () => {
     if (!newTitle) return;
     await updateConversationTitle(conversationId, newTitle);
+    await refreshConversations(); // IMPROBE: avoid querying db again using the return value from update?
     setIsEditing(false);
     setNewTitle(null);
-    await refreshConversations();
   }
 
   const handleCancelEdit = () => {
@@ -190,6 +190,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
               value={newTitle ?? title}
               onChange={(e) => setNewTitle(e.target.value)}
               autoFocus={true}
+              onBlur={() => void handleConfirmEdit()}
             />
           )
           : (
@@ -205,7 +206,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
         {isEditing
           ? (
             // confirm or cancel edit
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-2" onMouseDown={(e) => e.preventDefault()}>
               <FontAwesomeIcon
                 icon={faCheck}
                 size="sm"
