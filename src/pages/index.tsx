@@ -9,6 +9,8 @@ import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
 import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars } from "@fortawesome/free-solid-svg-icons";
+import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
+import { useClerk } from "@clerk/nextjs";
 
 // ------------------types------------------
 
@@ -241,6 +243,8 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
 
+  const { signOut } = useClerk();
+
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
     const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
@@ -260,7 +264,7 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
   }, []);
 
   return (
-    <div className="p-2 space-y-2">
+    <div className="h-full p-2 flex flex-col space-y-2">
       {/* new conversation button */}
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
@@ -271,29 +275,39 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
         <div className="text-sm">New Conversation</div>
       </button>
 
-      {/* loading indicator */}
-      {loading && (
-        <div className="py-2 flex justify-center">
-          <LoadingSpinner />
-        </div>
-      )}
-
       {/* conversation items */}
-      {!loading && conversations.map((c) => {
-        const isActive = c.conversationId === conversationId;
-        return (
-          <Fragment key={c.conversationId}>
-            <ConversationItem
-              conversationData={c}
-              isActive={isActive}
-              setActiveConversationId={setConversationId}
-              refreshConversations={refreshConversations}
-              disabled={disabled}
-            />
-          </Fragment>
-        );
-      })}
-    </div>
+      <div className="flex-1 overflow-auto">
+        {loading ? (
+          <LoadingSpinner />
+        ) : (
+          <div className="flex flex-col space-y-2">
+            {conversations.map((c) => {
+              const isActive = c.conversationId === conversationId;
+              return (
+                <Fragment key={c.conversationId}>
+                  <ConversationItem
+                    conversationData={c}
+                    isActive={isActive}
+                    setActiveConversationId={setConversationId}
+                    refreshConversations={refreshConversations}
+                    disabled={disabled}
+                  />
+                </Fragment>
+              );
+            })}
+          </div>
+        )}
+      </div>
+
+      <button
+        className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
+        onClick={() => void signOut()}
+        disabled={disabled}
+      >
+        <FontAwesomeIcon icon={faArrowRightFromBracket} size="sm" />
+        <div className="text-sm">Log out</div>
+      </button>
+    </div >
   );
 }
 
@@ -487,7 +501,7 @@ const Home: NextPage = () => {
             `
         }
       >
-        <div className="w-full h-full bg-[#202123] overflow-auto">
+        <div className="w-full h-full bg-[#202123]">
           <ConversationsSidebar
             conversationId={conversationId}
             setConversationId={setConversationId}
