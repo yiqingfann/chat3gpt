@@ -4,7 +4,13 @@ import Head from "next/head";
 import { api } from "~/utils/api";
 
 import "~/styles/globals.css";
-import { ClerkProvider, SignIn, SignOutButton, SignedIn, SignedOut } from "@clerk/nextjs";
+import { ClerkProvider, SignIn, SignedIn, SignedOut } from "@clerk/nextjs";
+
+// Use font awesome icons with server-side rendering
+// https://stackoverflow.com/questions/56334381/why-my-font-awesome-icons-are-being-displayed-big-at-first-and-then-updated-to-t
+import '@fortawesome/fontawesome-svg-core/styles.css';
+import { config } from '@fortawesome/fontawesome-svg-core';
+config.autoAddCss = false;
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
