@@ -202,7 +202,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
       </div>
 
       {/* edit and delete button */}
-      <div>
+      <div className={isActive ? "visible" : "invisible"}>
         {isEditing
           ? (
             // confirm or cancel edit
