@@ -30,7 +30,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
 
         <SignedOut>
           <div className="h-screen w-screen flex justify-center items-center">
-            <SignIn signUpUrl="/" />
+            <SignIn />
           </div>
         </SignedOut>
 
