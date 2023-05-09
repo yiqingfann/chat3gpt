@@ -11,6 +11,7 @@ import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
 import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars } from "@fortawesome/free-solid-svg-icons";
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useClerk } from "@clerk/nextjs";
+import { useRouter } from "next/router";
 
 // ------------------types------------------
 
@@ -242,6 +243,7 @@ type ConversationsSidebarProps = {
 const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: ConversationsSidebarProps) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
   const { signOut } = useClerk();
 
@@ -301,7 +303,10 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
 
       <button
         className="w-full p-3 rounded-lg hover:bg-white/20 text-white flex items-center space-x-2 border-2 border-slate-300"
-        onClick={() => void signOut()}
+        onClick={() => {
+          void signOut();
+          void router.push("/");
+        }}
         disabled={disabled}
       >
         <FontAwesomeIcon icon={faArrowRightFromBracket} size="sm" />
