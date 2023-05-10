@@ -23,6 +23,7 @@
     "@trpc/next": "^10.18.0",
     "@trpc/react-query": "^10.18.0",
     "@trpc/server": "^10.18.0",
+    "@vercel/analytics": "^1.0.1",
     "autosize": "^6.0.1",
     "eventsource-parser": "^0.0.5",
     "next": "^13.2.4",

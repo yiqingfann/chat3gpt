@@ -5,7 +5,7 @@ import { api } from "~/utils/api";
 
 import "~/styles/globals.css";
 import { ClerkProvider } from "@clerk/nextjs";
-import { dark } from '@clerk/themes';
+import { Analytics } from '@vercel/analytics/react';
 
 // Use font awesome icons with server-side rendering
 // https://stackoverflow.com/questions/56334381/why-my-font-awesome-icons-are-being-displayed-big-at-first-and-then-updated-to-t
@@ -30,6 +30,7 @@ const MyApp: AppType = ({ Component, pageProps }) => {
         }
       }}>
         <Component {...pageProps} />
+        <Analytics />
       </ClerkProvider>
     </>
   );
