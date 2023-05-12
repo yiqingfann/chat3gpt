@@ -11,7 +11,10 @@ import { Analytics } from '@vercel/analytics/react';
 // https://stackoverflow.com/questions/56334381/why-my-font-awesome-icons-are-being-displayed-big-at-first-and-then-updated-to-t
 import '@fortawesome/fontawesome-svg-core/styles.css';
 import { config } from '@fortawesome/fontawesome-svg-core';
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 config.autoAddCss = false;
+
+const queryClient = new QueryClient();
 
 const MyApp: AppType = ({ Component, pageProps }) => {
   return (
@@ -22,16 +25,18 @@ const MyApp: AppType = ({ Component, pageProps }) => {
         <link rel="icon" href="/favicon.ico" />
       </Head>
 
-      <ClerkProvider appearance={{
-        variables: {
-          colorPrimary: "#f4adc4",
-          colorTextOnPrimaryBackground: "black",
-          colorBackground: "white"
-        }
-      }}>
-        <Component {...pageProps} />
-        <Analytics />
-      </ClerkProvider>
+      <QueryClientProvider client={queryClient}>
+        <ClerkProvider appearance={{
+          variables: {
+            colorPrimary: "#f4adc4",
+            colorTextOnPrimaryBackground: "black",
+            colorBackground: "white"
+          }
+        }}>
+          <Component {...pageProps} />
+          <Analytics />
+        </ClerkProvider>
+      </QueryClientProvider>
     </>
   );
 };
