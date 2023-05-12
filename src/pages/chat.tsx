@@ -12,6 +12,9 @@ import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/router";
+import type { QueryObserverResult, RefetchOptions, RefetchQueryFilters } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+
 
 // ------------------types------------------
 
@@ -142,7 +145,7 @@ type ConversationItemProps = {
   conversationData: Conversation,
   isActive: boolean,
   setActiveConversationId: Dispatch<SetStateAction<string>>,
-  refreshConversations: () => Promise<void>,
+  refreshConversations: <TPageData>(options?: (RefetchOptions & RefetchQueryFilters<TPageData>) | undefined) => Promise<QueryObserverResult<Conversation[], unknown>>,
   disabled: boolean,
 };
 
@@ -241,29 +244,19 @@ type ConversationsSidebarProps = {
 };
 
 const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: ConversationsSidebarProps) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: conversations, isFetching, refetch } = useQuery({
+    queryKey: ['hello'],
+    queryFn: fetchAllConversations,
+    refetchOnWindowFocus: false,
+  });
   const router = useRouter();
-
   const { signOut } = useClerk();
 
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
-    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
-    setConversations(allConversations);
+    await refetch();
     setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
   }
-
-  const refreshConversations = async () => {
-    setLoading(true);
-    const allConversations = await fetchAllConversations();
-    setConversations(allConversations);
-    setLoading(false); // Q: is this the best place to set loading to false? or should I set it in the useEffect?
-  }
-
-  useEffect(() => {
-    void refreshConversations();
-  }, []);
 
   return (
     <div className="h-full p-2 flex flex-col space-y-2">
@@ -279,11 +272,11 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
 
       {/* conversation items */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
+        {isFetching ? (
           <LoadingSpinner />
         ) : (
           <div className="flex flex-col space-y-2">
-            {conversations.map((c) => {
+            {conversations?.map((c) => {
               const isActive = c.conversationId === conversationId;
               return (
                 <Fragment key={c.conversationId}>
@@ -291,7 +284,7 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
                     conversationData={c}
                     isActive={isActive}
                     setActiveConversationId={setConversationId}
-                    refreshConversations={refreshConversations}
+                    refreshConversations={refetch}
                     disabled={disabled}
                   />
                 </Fragment>
