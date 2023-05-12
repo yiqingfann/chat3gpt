@@ -178,11 +178,15 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
     setActiveConversationId("");
   }
 
+  const handleClickItem = () => {
+    if (disabled) return;
+    setActiveConversationId(conversationId);
+  }
+
   return (
-    <button
-      className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
-      onClick={() => setActiveConversationId(conversationId)}
-      disabled={disabled}
+    <div
+      className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${disabled ? "" : "hover:cursor-pointer"} ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
+      onClick={handleClickItem}
     >
       {/* message icon and title */}
       <div className="flex items-center space-x-2 min-w-0">
@@ -233,7 +237,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
             </div>
           )}
       </div>
-    </button>
+    </div>
   );
 }
 
