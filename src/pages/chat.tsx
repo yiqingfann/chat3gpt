@@ -7,7 +7,7 @@ import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "reac
 import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
+import { faCircleLeft, faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
 import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars } from "@fortawesome/free-solid-svg-icons";
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useClerk } from "@clerk/nextjs";
@@ -515,7 +515,15 @@ const Home: NextPage = () => {
       {/* messages area and input */}
       <div className="grow relative">
         <div className="absolute left-0 right-0 top-0 bottom-0">
-          {loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />}
+          {!conversationId.length && (
+            <div className="relative h-full w-full flex justify-center items-center text-[#565869] text-lg sm:text-3xl space-x-2 sm:space-x-4">
+              <FontAwesomeIcon icon={faCircleLeft} />
+              <div>Select or Create a conversation</div>
+            </div>
+          )}
+          {!!conversationId.length && (
+            loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />
+          )}
         </div>
 
         {!!conversationId.length && !loading && (
