@@ -7,11 +7,14 @@ import type { FormEvent, ChangeEvent, SetStateAction, KeyboardEvent } from "reac
 import type { ChatCompletionRequestMessage } from "openai";
 import type { Message } from "~/types";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
+import { faCircleLeft, faMessage, faTrashCan } from "@fortawesome/free-regular-svg-icons";
 import { faCheck, faPencil, faPlus, faTrash, faXmark, faCircleXmark, faL, faBars } from "@fortawesome/free-solid-svg-icons";
 import { faArrowRightFromBracket } from "@fortawesome/free-solid-svg-icons";
 import { useClerk } from "@clerk/nextjs";
 import { useRouter } from "next/router";
+import type { QueryObserverResult, RefetchOptions, RefetchQueryFilters } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
+
 
 // ------------------types------------------
 
@@ -142,7 +145,7 @@ type ConversationItemProps = {
   conversationData: Conversation,
   isActive: boolean,
   setActiveConversationId: Dispatch<SetStateAction<string>>,
-  refreshConversations: () => Promise<void>,
+  refreshConversations: <TPageData>(options?: (RefetchOptions & RefetchQueryFilters<TPageData>) | undefined) => Promise<QueryObserverResult<Conversation[], unknown>>,
   disabled: boolean,
 };
 
@@ -175,11 +178,15 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
     setActiveConversationId("");
   }
 
+  const handleClickItem = () => {
+    if (disabled) return;
+    setActiveConversationId(conversationId);
+  }
+
   return (
-    <button
-      className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
-      onClick={() => setActiveConversationId(conversationId)}
-      disabled={disabled}
+    <div
+      className={`w-full p-3 rounded-lg flex justify-between items-center text-white ${disabled ? "" : "hover:cursor-pointer"} ${isActive ? "bg-white/20" : "hover:bg-white/10"}`}
+      onClick={handleClickItem}
     >
       {/* message icon and title */}
       <div className="flex items-center space-x-2 min-w-0">
@@ -230,7 +237,7 @@ const ConversationItem = ({ conversationData, isActive, setActiveConversationId,
             </div>
           )}
       </div>
-    </button>
+    </div>
   );
 }
 
@@ -241,29 +248,19 @@ type ConversationsSidebarProps = {
 };
 
 const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: ConversationsSidebarProps) => {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: conversations, isFetching, refetch } = useQuery({
+    queryKey: ['hello'],
+    queryFn: fetchAllConversations,
+    refetchOnWindowFocus: false,
+  });
   const router = useRouter();
-
   const { signOut } = useClerk();
 
   const handleClickNewConversation = async () => {
     const newConversation = await createNewConversation();
-    const allConversations = await fetchAllConversations(); // Q: what is best practice - append new item or fetch all items again?
-    setConversations(allConversations);
+    await refetch();
     setConversationId(newConversation.conversationId); // Q: what is best practice - should I avoid sequential setState?
   }
-
-  const refreshConversations = async () => {
-    setLoading(true);
-    const allConversations = await fetchAllConversations();
-    setConversations(allConversations);
-    setLoading(false); // Q: is this the best place to set loading to false? or should I set it in the useEffect?
-  }
-
-  useEffect(() => {
-    void refreshConversations();
-  }, []);
 
   return (
     <div className="h-full p-2 flex flex-col space-y-2">
@@ -279,11 +276,11 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
 
       {/* conversation items */}
       <div className="flex-1 overflow-auto">
-        {loading ? (
+        {isFetching ? (
           <LoadingSpinner />
         ) : (
           <div className="flex flex-col space-y-2">
-            {conversations.map((c) => {
+            {conversations?.map((c) => {
               const isActive = c.conversationId === conversationId;
               return (
                 <Fragment key={c.conversationId}>
@@ -291,7 +288,7 @@ const ConversationsSidebar = ({ conversationId, setConversationId, disabled }: C
                     conversationData={c}
                     isActive={isActive}
                     setActiveConversationId={setConversationId}
-                    refreshConversations={refreshConversations}
+                    refreshConversations={refetch}
                     disabled={disabled}
                   />
                 </Fragment>
@@ -516,9 +513,17 @@ const Home: NextPage = () => {
       </div>
 
       {/* messages area and input */}
-      <div className="grow relative">
+      <div className="grow relative" onClick={() => setShowSidebarOnMobile(false)}>
         <div className="absolute left-0 right-0 top-0 bottom-0">
-          {loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />}
+          {!conversationId.length && (
+            <div className="relative h-full w-full flex justify-center items-center text-[#565869] text-lg sm:text-3xl space-x-2 sm:space-x-4">
+              <FontAwesomeIcon icon={faCircleLeft} />
+              <div>Select or Create a conversation</div>
+            </div>
+          )}
+          {!!conversationId.length && (
+            loading ? <LoadingSpinner /> : <MessagesArea messages={messages} />
+          )}
         </div>
 
         {!!conversationId.length && !loading && (

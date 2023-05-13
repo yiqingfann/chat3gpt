@@ -13,12 +13,13 @@
     "@clerk/nextjs": "^4.17.2",
     "@clerk/themes": "^1.6.4",
     "@fortawesome/fontawesome-svg-core": "^6.4.0",
+    "@fortawesome/free-brands-svg-icons": "^6.4.0",
     "@fortawesome/free-regular-svg-icons": "^6.4.0",
     "@fortawesome/free-solid-svg-icons": "^6.4.0",
     "@fortawesome/react-fontawesome": "^0.2.0",
     "@next/font": "^13.4.1",
     "@prisma/client": "^4.11.0",
-    "@tanstack/react-query": "^4.28.0",
+    "@tanstack/react-query": "^4.29.5",
     "@trpc/client": "^10.18.0",
     "@trpc/next": "^10.18.0",
     "@trpc/react-query": "^10.18.0",
@@ -35,6 +36,7 @@
     "zod": "^3.21.4"
   },
   "devDependencies": {
+    "@tanstack/eslint-plugin-query": "^4.29.4",
     "@types/autosize": "^4.0.1",
     "@types/eslint": "^8.21.3",
     "@types/node": "^18.15.5",
