@@ -513,7 +513,7 @@ const Home: NextPage = () => {
       </div>
 
       {/* messages area and input */}
-      <div className="grow relative">
+      <div className="grow relative" onClick={() => setShowSidebarOnMobile(false)}>
         <div className="absolute left-0 right-0 top-0 bottom-0">
           {!conversationId.length && (
             <div className="relative h-full w-full flex justify-center items-center text-[#565869] text-lg sm:text-3xl space-x-2 sm:space-x-4">
