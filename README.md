@@ -1,10 +1,10 @@
 # ChaT3Gpt
 
-A ChatGPT Clone built with [T3 Stack](https://create.t3.gg/). Have Fun!
+A ChatGPT Clone built with <a href="https://create.t3.gg" target="_blank">T3 Stack</a>. Have Fun!
 
-Web App: https://chat.yiqing.dev/
+Web App: <a href="https://chat.yiqing.dev" target="_blank">https://chat.yiqing.dev</a>
 
-Blog Post (Chinese): https://www.yiqing.dev/blogs/chat3gpt
+Blog Post (Chinese): <a href="https://www.yiqing.dev/blogs/chat3gpt" target="_blank">https://www.yiqing.dev/blogs/chat3gpt</a>
 
 ![intro](./public/intro.gif)
 
